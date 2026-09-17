@@ -1,16 +1,13 @@
 package company.vk.edu.distrib.compute.iizhukov.urlshortener.api.v0;
 
-import java.util.List;
-
 import company.vk.edu.distrib.compute.iizhukov.urlshortener.api.helpers.BaseController;
 import company.vk.edu.distrib.compute.iizhukov.urlshortener.api.helpers.HttpStatus;
 import company.vk.edu.distrib.compute.iizhukov.urlshortener.api.helpers.Request;
 import company.vk.edu.distrib.compute.iizhukov.urlshortener.api.helpers.Response;
-import company.vk.edu.distrib.compute.iizhukov.urlshortener.api.helpers.middlewares.AuthMiddleware;
 
 public class StatusController extends BaseController {
     public StatusController(int port) {
-        super(port, List.of(new AuthMiddleware()));
+        super(port);
     }
 
     @Override

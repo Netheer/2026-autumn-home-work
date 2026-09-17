@@ -1,19 +1,16 @@
 package company.vk.edu.distrib.compute.iizhukov.urlshortener.api.v0;
 
-import java.util.List;
-
 import company.vk.edu.distrib.compute.iizhukov.urlshortener.api.helpers.BaseController;
 import company.vk.edu.distrib.compute.iizhukov.urlshortener.api.helpers.HttpStatus;
 import company.vk.edu.distrib.compute.iizhukov.urlshortener.api.helpers.Request;
 import company.vk.edu.distrib.compute.iizhukov.urlshortener.api.helpers.Response;
-import company.vk.edu.distrib.compute.iizhukov.urlshortener.api.helpers.middlewares.AuthMiddleware;
 import company.vk.edu.distrib.compute.iizhukov.urlshortener.db.dao.LinksDao;
 
 public class IndexController extends BaseController {
     private final LinksDao dao = LinksDao.create();
 
     public IndexController(int port) {
-        super(port, List.of(new AuthMiddleware()));
+        super(port);
     }
 
     @Override

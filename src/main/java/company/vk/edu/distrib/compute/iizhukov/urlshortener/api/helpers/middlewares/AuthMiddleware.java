@@ -34,6 +34,12 @@ public class AuthMiddleware implements Middleware {
         var user = data[0];
         var password = data[1];
 
+        if (dao.get(user) == null) {
+            return Response.builder()
+                    .setStatus(HttpStatus.UNAUTHORIZED)
+                    .build();
+        }
+
         var newHash = Integer.toString(password.hashCode());
         var oldHash = dao.get(user).passwordHash();
 
