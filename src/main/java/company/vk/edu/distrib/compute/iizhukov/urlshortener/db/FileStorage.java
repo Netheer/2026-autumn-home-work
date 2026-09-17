@@ -89,7 +89,7 @@ public class FileStorage<T extends Record> implements Closeable {
         try {
             return type.getDeclaredConstructor(parameterTypes);
         } catch (NoSuchMethodException e) {
-            throw new RuntimeException("No such constructor in record");
+            throw new RuntimeException("No such constructor in record", e);
         }
     }
 

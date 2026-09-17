@@ -1,7 +1,7 @@
 package company.vk.edu.distrib.compute.iizhukov.urlshortener.api.helpers;
 
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public final class Response {
     private final int status;
@@ -37,15 +37,15 @@ public final class Response {
     }
 
     public static final class Builder {
+        private HttpStatus status = HttpStatus.METHOD_NOT_ALLOWED;
+        private String content = "";
+        private final Map<String, String> headers = new ConcurrentHashMap<>(Map.of(
+                "Content-Type", "text/html; charset=utf-8"
+        ));
+
         private Builder() {
 
         }
-
-        private HttpStatus status = HttpStatus.METHOD_NOT_ALLOWED;
-        private String content = "";
-        private final Map<String, String> headers = new HashMap<>(Map.of(
-                "Content-Type", "text/html; charset=utf-8"
-        ));
 
         public Builder setStatus(HttpStatus status) {
             this.status = status;

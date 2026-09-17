@@ -5,13 +5,13 @@ import java.io.IOException;
 import java.util.Map;
 
 import company.vk.edu.distrib.compute.Dao;
-import company.vk.edu.distrib.compute.iizhukov.urlshortener.db.DataValidator;
+import company.vk.edu.distrib.compute.iizhukov.urlshortener.db.DataValidationUtils;
 import company.vk.edu.distrib.compute.iizhukov.urlshortener.db.FileStorage;
 import company.vk.edu.distrib.compute.iizhukov.urlshortener.db.models.LinkModel;
 import org.jspecify.annotations.NonNull;
 
-public class LinksDao implements Dao<@NonNull LinkModel> {
-    private static LinksDao INSTANCE;
+public final class LinksDao implements Dao<@NonNull LinkModel> {
+    private static LinksDao instance;
     private final Map<String, LinkModel> links;
     private final FileStorage<LinkModel> storage;
 
@@ -24,45 +24,45 @@ public class LinksDao implements Dao<@NonNull LinkModel> {
     }
 
     public static synchronized LinksDao create() {
-        if (INSTANCE == null) {
+        if (instance == null) {
             try {
-                INSTANCE = new LinksDao();
+                instance = new LinksDao();
             } catch (IOException e) {
-                throw new RuntimeException("cant open file");
+                throw new RuntimeException("cant open file", e);
             }
         }
 
-        return INSTANCE;
+        return instance;
     }
 
     @Override
     public LinkModel get(String key) throws IllegalArgumentException {
-        DataValidator.validateKey(key);
+        DataValidationUtils.validateKey(key);
         return links.get(key);
     }
 
     @Override
     public void upsert(String key, LinkModel value) throws IllegalArgumentException {
-        DataValidator.validateKey(key);
-        DataValidator.validateUrl(value.url());
+        DataValidationUtils.validateKey(key);
+        DataValidationUtils.validateUrl(value.url());
         links.put(key, value);
 
         try {
             storage.write(links);
         } catch (IOException e) {
-            throw new RuntimeException("cant write file =(");
+            throw new RuntimeException("cant write file =(", e);
         }
     }
 
     @Override
     public void delete(String key) throws IllegalArgumentException {
-        DataValidator.validateKey(key);
+        DataValidationUtils.validateKey(key);
         links.remove(key);
 
         try {
             storage.write(links);
         } catch (IOException e) {
-            throw new RuntimeException("cant write file =(");
+            throw new RuntimeException("cant write file =(", e);
         }
     }
 
@@ -72,7 +72,7 @@ public class LinksDao implements Dao<@NonNull LinkModel> {
             storage.write(links);
             storage.close();
         } catch (IOException e) {
-            throw new RuntimeException("cant close file");
+            throw new RuntimeException("cant close file", e);
         }
     }
 }

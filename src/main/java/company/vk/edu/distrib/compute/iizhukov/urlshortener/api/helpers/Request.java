@@ -2,8 +2,8 @@ package company.vk.edu.distrib.compute.iizhukov.urlshortener.api.helpers;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import com.sun.net.httpserver.HttpExchange;
 
@@ -48,13 +48,13 @@ public final class Request {
     }
 
     public static final class Builder {
+        private String path;
+        private String body;
+        private final Map<String, String> headers = new ConcurrentHashMap<>();
+
         private Builder() {
 
         }
-
-        private String path;
-        private String body;
-        private final Map<String, String> headers = new HashMap<>();
 
         public Builder setPath(String path) {
             this.path = path;

@@ -1,9 +1,7 @@
 package company.vk.edu.distrib.compute.iizhukov.urlshortener.api.helpers.middlewares;
 
-import java.lang.classfile.instruction.NewMultiArrayInstruction;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
-import java.util.function.Function;
 
 import company.vk.edu.distrib.compute.iizhukov.urlshortener.api.helpers.Handler;
 import company.vk.edu.distrib.compute.iizhukov.urlshortener.api.helpers.HttpStatus;

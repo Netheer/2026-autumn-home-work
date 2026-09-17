@@ -5,14 +5,12 @@ import java.io.IOException;
 import java.util.Map;
 
 import company.vk.edu.distrib.compute.Dao;
-import company.vk.edu.distrib.compute.iizhukov.urlshortener.db.DataValidator;
 import company.vk.edu.distrib.compute.iizhukov.urlshortener.db.FileStorage;
-import company.vk.edu.distrib.compute.iizhukov.urlshortener.db.models.LinkModel;
 import company.vk.edu.distrib.compute.iizhukov.urlshortener.db.models.UserModel;
 import org.jspecify.annotations.NonNull;
 
-public class UserDao implements Dao<@NonNull UserModel> {
-    private static UserDao INSTANCE;
+public final class UserDao implements Dao<@NonNull UserModel> {
+    private static UserDao instance;
     private final Map<String, UserModel> users;
     private final FileStorage<UserModel> storage;
 
@@ -25,15 +23,15 @@ public class UserDao implements Dao<@NonNull UserModel> {
     }
 
     public static synchronized UserDao create() {
-        if (INSTANCE == null) {
+        if (instance == null) {
             try {
-                INSTANCE = new UserDao();
+                instance = new UserDao();
             } catch (IOException e) {
-                throw new RuntimeException("cant open file");
+                throw new RuntimeException("cant open file", e);
             }
         }
 
-        return INSTANCE;
+        return instance;
     }
 
     @Override
@@ -48,7 +46,7 @@ public class UserDao implements Dao<@NonNull UserModel> {
         try {
             storage.write(users);
         } catch (IOException e) {
-            throw new RuntimeException("cant write file =(");
+            throw new RuntimeException("cant write file =(", e);
         }
     }
 
@@ -59,7 +57,7 @@ public class UserDao implements Dao<@NonNull UserModel> {
         try {
             storage.write(users);
         } catch (IOException e) {
-            throw new RuntimeException("cant write file =(");
+            throw new RuntimeException("cant write file =(", e);
         }
     }
 
@@ -69,7 +67,7 @@ public class UserDao implements Dao<@NonNull UserModel> {
             storage.write(users);
             storage.close();
         } catch (IOException e) {
-            throw new RuntimeException("cant close file");
+            throw new RuntimeException("cant close file", e);
         }
     }
 }

@@ -1,7 +1,7 @@
 package company.vk.edu.distrib.compute.iizhukov.urlshortener.db;
 
-public class DataValidator {
-    private DataValidator() {
+public final class DataValidationUtils {
+    private DataValidationUtils() {
 
     }
 
