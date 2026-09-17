@@ -7,21 +7,34 @@ import company.vk.edu.distrib.compute.iizhukov.urlshortener.api.helpers.HttpStat
 import company.vk.edu.distrib.compute.iizhukov.urlshortener.api.helpers.Request;
 import company.vk.edu.distrib.compute.iizhukov.urlshortener.api.helpers.Response;
 import company.vk.edu.distrib.compute.iizhukov.urlshortener.api.helpers.middlewares.AuthMiddleware;
+import company.vk.edu.distrib.compute.iizhukov.urlshortener.db.dao.LinksDao;
 
-public class StatusController extends BaseController {
-    public StatusController(int port) {
+public class IndexController extends BaseController {
+    private final LinksDao dao = LinksDao.create();
+
+    public IndexController(int port) {
         super(port, List.of(new AuthMiddleware()));
     }
 
     @Override
     public String path() {
-        return "/v0/status";
+        return "/";
     }
 
     @Override
     public Response get(Request request) {
+        var key = request.path().substring(path().length());
+        var model = dao.get(key);
+
+        if (model == null) {
+            return Response.builder()
+                    .setStatus(HttpStatus.NOT_FOUND)
+                    .build();
+        }
+
         return Response.builder()
-                .setStatus(HttpStatus.OK)
+                .setStatus(HttpStatus.MOVED_PERMANENTLY)
+                .addHeader("Location", model.url())
                 .build();
     }
 

@@ -7,27 +7,40 @@ import company.vk.edu.distrib.compute.iizhukov.urlshortener.api.helpers.HttpStat
 import company.vk.edu.distrib.compute.iizhukov.urlshortener.api.helpers.Request;
 import company.vk.edu.distrib.compute.iizhukov.urlshortener.api.helpers.Response;
 import company.vk.edu.distrib.compute.iizhukov.urlshortener.api.helpers.middlewares.AuthMiddleware;
+import company.vk.edu.distrib.compute.iizhukov.urlshortener.db.dao.UserDao;
+import company.vk.edu.distrib.compute.iizhukov.urlshortener.db.models.UserModel;
 
-public class StatusController extends BaseController {
-    public StatusController(int port) {
-        super(port, List.of(new AuthMiddleware()));
+public class InternalUsersController extends BaseController {
+    private final UserDao dao = UserDao.create();
+
+    public InternalUsersController(int port) {
+        super(port);
     }
 
     @Override
     public String path() {
-        return "/v0/status";
+        return "/internal/users";
     }
 
     @Override
     public Response get(Request request) {
-        return Response.builder()
-                .setStatus(HttpStatus.OK)
-                .build();
+        return null;
     }
 
     @Override
     public Response post(Request request) {
-        return null;
+        var raw = request.body().split(":");
+        var user = raw[0];
+        var password = raw[1];
+
+        dao.upsert(user, new UserModel(
+                user,
+                Integer.toString(password.hashCode())
+        ));
+
+        return Response.builder()
+                .setStatus(HttpStatus.OK)
+                .build();
     }
 
     @Override

@@ -5,11 +5,14 @@ import java.net.InetSocketAddress;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.IntFunction;
 
 import javax.annotation.Nullable;
 
 import com.sun.net.httpserver.HttpServer;
 import company.vk.edu.distrib.compute.iizhukov.urlshortener.api.helpers.BaseController;
+import company.vk.edu.distrib.compute.iizhukov.urlshortener.api.v0.IndexController;
+import company.vk.edu.distrib.compute.iizhukov.urlshortener.api.v0.InternalUsersController;
 import company.vk.edu.distrib.compute.iizhukov.urlshortener.api.v0.LinksController;
 import company.vk.edu.distrib.compute.iizhukov.urlshortener.api.v0.StatusController;
 import company.vk.edu.distrib.compute.urlshortener.UrlShortenerService;
@@ -19,10 +22,12 @@ import org.slf4j.LoggerFactory;
 public class Application implements UrlShortenerService {
     private static final Logger log = LoggerFactory.getLogger(Application.class);
 
-    private final Collection<BaseController> registry =
+    private final Collection<IntFunction<BaseController>> registry =
             List.of(
-                    new StatusController(),
-                    new LinksController()
+                    StatusController::new,
+                    LinksController::new,
+                    IndexController::new,
+                    InternalUsersController::new
             );
 
     @Nullable
@@ -32,7 +37,9 @@ public class Application implements UrlShortenerService {
         server = HttpServer.create(new InetSocketAddress(port), 1);
 
         registry.forEach(controller -> {
-            Objects.requireNonNull(server).createContext(controller.path(), controller);
+            var instance = controller.apply(port);
+
+            Objects.requireNonNull(server).createContext(instance.path(), instance);
             log.info("Controller %s was registered".formatted(controller.getClass().getName()));
         });
     }
