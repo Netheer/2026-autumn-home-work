@@ -31,6 +31,9 @@ public class Cloudyy74UrlShortenerService implements UrlShortenerService {
     private static final SecureRandom RANDOM = new SecureRandom();
 
     private static final String CONTENT_TYPE_TEXT = "text/html; charset=utf-8";
+    private static final String GET_METHOD = "GET";
+    private static final String POST_METHOD = "POST";
+    private static final String BASIC_AUTH_SCHEME = "Basic";
 
     public Cloudyy74UrlShortenerService(int port) throws IOException {
         this.port = port;
@@ -53,7 +56,7 @@ public class Cloudyy74UrlShortenerService implements UrlShortenerService {
     }
 
     private void handleStatus(HttpExchange exchange) throws IOException {
-        if (!"GET".equals(exchange.getRequestMethod())) {
+        if (!GET_METHOD.equals(exchange.getRequestMethod())) {
             exchange.sendResponseHeaders(405, -1);
             return;
         }
@@ -61,7 +64,7 @@ public class Cloudyy74UrlShortenerService implements UrlShortenerService {
     }
 
     private void handleNewLink(HttpExchange exchange) throws IOException {
-        if (!"POST".equals(exchange.getRequestMethod())) {
+        if (!POST_METHOD.equals(exchange.getRequestMethod())) {
             exchange.sendResponseHeaders(405, -1);
             return;
         }
@@ -82,7 +85,7 @@ public class Cloudyy74UrlShortenerService implements UrlShortenerService {
         validateId(id);
 
         switch (exchange.getRequestMethod()) {
-            case "GET" -> getLink(exchange, id);
+            case GET_METHOD -> getLink(exchange, id);
             case "PUT" -> updateLink(exchange, id);
             case "DELETE" -> deleteLink(exchange, id);
             default -> exchange.sendResponseHeaders(405, -1);
@@ -111,7 +114,7 @@ public class Cloudyy74UrlShortenerService implements UrlShortenerService {
     }
 
     private void handleRedirect(HttpExchange exchange) throws IOException {
-        if (!"GET".equals(exchange.getRequestMethod())) {
+        if (!GET_METHOD.equals(exchange.getRequestMethod())) {
             exchange.sendResponseHeaders(405, -1);
             return;
         }
@@ -183,7 +186,7 @@ public class Cloudyy74UrlShortenerService implements UrlShortenerService {
     }
 
     private void handleNewUser(HttpExchange exchange) throws IOException {
-        if (!"POST".equals(exchange.getRequestMethod())) {
+        if (!POST_METHOD.equals(exchange.getRequestMethod())) {
             exchange.sendResponseHeaders(405, -1);
             return;
         }
@@ -223,7 +226,7 @@ public class Cloudyy74UrlShortenerService implements UrlShortenerService {
         }
 
         final var scheme = authorization.substring(0, sep);
-        if (!"Basic".equalsIgnoreCase(scheme)) {
+        if (!BASIC_AUTH_SCHEME.equalsIgnoreCase(scheme)) {
             throw new IllegalArgumentException("Expected Basic Authorization scheme");
         }
 

@@ -10,9 +10,12 @@ import java.nio.file.StandardOpenOption;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class Cloudyy74PersistentDao implements Dao<String> {
     private final Map<String, String> storage = new ConcurrentHashMap<>();
+    private final Lock writeLock = new ReentrantLock();
     private final Path logFile;
 
     public Cloudyy74PersistentDao(String logFile) throws IOException {
@@ -37,15 +40,25 @@ public class Cloudyy74PersistentDao implements Dao<String> {
     }
 
     @Override
-    public synchronized void upsert(String key, String value) throws IllegalArgumentException, IOException {
-        append("PUT " + key + " " + value);
-        storage.put(key, value);
+    public void upsert(String key, String value) throws IllegalArgumentException, IOException {
+        writeLock.lock();
+        try {
+            append("PUT " + key + " " + value);
+            storage.put(key, value);
+        } finally {
+            writeLock.unlock();
+        }
     }
 
     @Override
-    public synchronized void delete(String key) throws IllegalArgumentException, IOException {
-        append("DEL " + key);
-        storage.remove(key);
+    public void delete(String key) throws IllegalArgumentException, IOException {
+        writeLock.lock();
+        try {
+            append("DEL " + key);
+            storage.remove(key);
+        } finally {
+            writeLock.unlock();
+        }
     }
 
     @Override
