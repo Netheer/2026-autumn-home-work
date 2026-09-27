@@ -33,7 +33,7 @@ public interface ResponseBody {
 
         @Override
         public long length() {
-            return body.length();
+            return body.getBytes().length;
         }
 
     }

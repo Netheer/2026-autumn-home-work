@@ -26,11 +26,19 @@ public final class BasicAuthentication implements AuthenticationScheme {
     public Optional<AuthenticationScheme.Credentials> parse(Request request) {
         return Optional.ofNullable(request.getRequestHeaders().getFirst(HeaderConstants.AUTHORIZATION))
             .map(this::token)
-            .map(Base64.getDecoder()::decode)
+            .flatMap(this::decodeBase64)
             .map(bytes -> new String(bytes, StandardCharsets.UTF_8))
             .map(KeyValuePair::new)
             .filter(KeyValuePair::valid)
             .map(credentials -> () -> credentials.exists(users));
+    }
+
+    private Optional<byte[]> decodeBase64(String src) {
+        try {
+            return Optional.of(Base64.getDecoder().decode(src));
+        } catch (IllegalArgumentException e) {
+            return Optional.empty();
+        }
     }
 
     private String token(String value) {
@@ -43,6 +51,6 @@ public final class BasicAuthentication implements AuthenticationScheme {
 
     @Override
     public String challenge() {
-        return "%s %s=\"%s\'".formatted(AuthenticationConstants.BASIC, AuthenticationConstants.REALM, realm);
+        return "%s %s=\"%s\"".formatted(AuthenticationConstants.BASIC, AuthenticationConstants.REALM, realm);
     }
 }
