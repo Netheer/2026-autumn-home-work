@@ -19,7 +19,12 @@ final class DaoOperations {
         DaoOperation.DELETE, DaoOperation.Delete::new);
 
     void fill(Stream<String> raw) {
-        raw.map(KeyValuePair::new).filter(KeyValuePair::valid).map(this::parse).flatMap(Optional::stream).forEach(this::add);
+        raw //
+            .map(KeyValuePair::new) //
+            .filter(KeyValuePair::valid) //
+            .map(this::parse) //
+            .flatMap(Optional::stream) //
+            .forEach(this::add);
     }
 
     void add(DaoOperation operation) {
