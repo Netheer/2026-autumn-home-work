@@ -1,4 +1,4 @@
-package company.vk.edu.distrib.compute.test.urlshortener;
+package company.vk.edu.distrib.compute.test;
 
 import java.io.File;
 import java.lang.annotation.Annotation;
