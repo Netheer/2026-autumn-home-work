@@ -1,54 +1,90 @@
 package company.vk.edu.distrib.compute.iizhukov.urlshortener.db;
 
 import java.io.Closeable;
+import java.io.EOFException;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public final class FileStorage implements Closeable {
+    private static final byte PUT = 1;
+    private static final byte DELETE = 2;
+
     private final RandomAccessFile file;
 
-    public FileStorage(File file) throws IOException {
-        File parent = file.getParentFile();
+    public FileStorage(File path) throws IOException {
+        File parent = path.getParentFile();
 
         if (parent != null) {
             parent.mkdirs();
         }
 
-        this.file = new RandomAccessFile(file, "rw");
+        file = new RandomAccessFile(path, "rw");
     }
 
-    @SuppressWarnings("PMD.AvoidSynchronizedStatement")
-    public void write(Map<String, String> data) throws IOException {
-        synchronized (file) {
-            var snapshot = new HashMap<>(data);
-            file.setLength(0);
-            file.writeInt(snapshot.size());
+    public Map<String, String> read() throws IOException {
+        var data = new ConcurrentHashMap<String, String>();
+        load(data);
+        write(data);
+        return data;
+    }
 
-            for (var entry : snapshot.entrySet()) {
-                file.writeUTF(entry.getKey());
-                file.writeUTF(entry.getValue());
+    public void upsert(String key, String value) throws IOException {
+        append(PUT, key, value);
+    }
+
+    public void delete(String key) throws IOException {
+        append(DELETE, key, "");
+    }
+
+    private void load(Map<String, String> data) throws IOException {
+        file.seek(0);
+
+        while (file.getFilePointer() < file.length()) {
+            long position = file.getFilePointer();
+
+            try {
+                var command = file.readByte();
+                var key = file.readUTF();
+
+                if (command == PUT) {
+                    data.put(key, file.readUTF());
+                } else if (command == DELETE) {
+                    data.remove(key);
+                } else {
+                    throw new IOException("Unknown command: " + command);
+                }
+            } catch (EOFException e) {
+                file.setLength(position);
             }
         }
     }
 
-    public Map<String, String> read() throws IOException {
-        var result = new HashMap<String, String>();
-        file.seek(0);
+    private void write(Map<String, String> data) throws IOException {
+        file.setLength(0);
 
-        if (file.length() == 0) {
-            return result;
+        for (var entry : data.entrySet()) {
+            append(PUT, entry.getKey(), entry.getValue());
         }
+    }
 
-        var count = file.readInt();
+    private void append(byte command, String key, String value) throws IOException {
+        long position = file.length();
+        file.seek(position);
 
-        for (int i = 0; i < count; ++i) {
-            result.put(file.readUTF(), file.readUTF());
+        try {
+            file.writeByte(command);
+            file.writeUTF(key);
+
+            if (command == PUT) {
+                file.writeUTF(value);
+            }
+        } catch (IOException e) {
+            file.setLength(position);
+            throw e;
         }
-
-        return result;
     }
 
     @Override
