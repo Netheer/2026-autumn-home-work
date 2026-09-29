@@ -4,8 +4,8 @@ import java.net.http.HttpClient;
 import java.net.http.HttpResponse;
 import java.util.concurrent.ThreadLocalRandom;
 
+import company.vk.edu.distrib.compute.AbstractHttpServiceFactory;
 import company.vk.edu.distrib.compute.kv.KVService;
-import company.vk.edu.distrib.compute.kv.KVServiceFactory;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
@@ -32,7 +32,7 @@ class KVServiceSingleNodeTest {
     static final String ENTITY_PATH = "/v0/entity/";
 
     @Parameter
-    KVServiceFactory kvServiceFactory;
+    AbstractHttpServiceFactory<KVService> kvServiceFactory;
 
     @AfterAll
     static void afterAll() {

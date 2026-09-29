@@ -17,6 +17,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Supplier;
 
 import org.jspecify.annotations.Nullable;
+import org.junit.jupiter.api.function.Executable;
 
 public enum TestUtils {
     ;
@@ -60,8 +61,14 @@ public enum TestUtils {
         }
     }
 
-    public static void runHttpCtx(HttpClient client, int port, Runnable runnable) {
-        ScopedValue.where(HTTP_CONTEXT, new HttpContext(client, port)).run(runnable);
+    public static void runHttpCtx(HttpClient client, int port, Executable executable) {
+        ScopedValue.where(HTTP_CONTEXT, new HttpContext(client, port)).run(() -> {
+            try {
+                executable.execute();
+            } catch (Throwable e) {
+                throw new RuntimeException(e);
+            }
+        });
     }
 
     public static int status() {

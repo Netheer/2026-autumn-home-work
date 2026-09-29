@@ -1,18 +1,33 @@
 package company.vk.edu.distrib.compute.test.urlshortener;
 
+import java.io.IOException;
 import java.net.http.HttpClient;
 import java.net.http.HttpResponse;
+import java.util.Collection;
+import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.Objects;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import company.vk.edu.distrib.compute.AbstractHttpServiceFactory;
-import company.vk.edu.distrib.compute.test.TestUtils;
+import company.vk.edu.distrib.compute.Dao;
+import company.vk.edu.distrib.compute.kv.KVService;
+import company.vk.edu.distrib.compute.kv.KVServiceTest;
+import company.vk.edu.distrib.compute.kv.RemoteDaoFactory;
+import company.vk.edu.distrib.compute.kv.RemoteDaoFactoryTest;
 import company.vk.edu.distrib.compute.urlshortener.UrlShortenerService;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.junit.jupiter.params.Parameter;
 import org.junit.jupiter.params.ParameterizedClass;
-import org.junit.jupiter.params.provider.ArgumentsSource;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
+import static company.vk.edu.distrib.compute.test.AbstractArgumentsProvider.findAnnotatedFactories;
 import static company.vk.edu.distrib.compute.test.TestUtils.CONTENT_TYPE_TEXT;
 import static company.vk.edu.distrib.compute.test.TestUtils.TEST_LINK_ID;
 import static company.vk.edu.distrib.compute.test.TestUtils.TEST_LONG_LINK;
@@ -21,74 +36,62 @@ import static company.vk.edu.distrib.compute.test.TestUtils.TIMEOUT;
 import static company.vk.edu.distrib.compute.test.TestUtils.extractId;
 import static company.vk.edu.distrib.compute.test.TestUtils.get;
 import static company.vk.edu.distrib.compute.test.TestUtils.header;
-import static company.vk.edu.distrib.compute.test.TestUtils.isOfString;
 import static company.vk.edu.distrib.compute.test.TestUtils.randomPort;
 import static company.vk.edu.distrib.compute.test.TestUtils.runHttpCtx;
 import static company.vk.edu.distrib.compute.test.TestUtils.tryCreateTestUser;
+import static company.vk.edu.distrib.compute.test.urlshortener.LinksApiTest.createLink;
+import static company.vk.edu.distrib.compute.test.urlshortener.LinksApiTest.deleteLink;
+import static company.vk.edu.distrib.compute.test.urlshortener.LinksApiTest.getLinks;
+import static company.vk.edu.distrib.compute.test.urlshortener.LinksApiTest.updateLink;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
 /**
- * CRUD tests for {@link UrlShortenerService} implementation.
+ * CRUD tests for {@link UrlShortenerService} <-> {@link KVService} implementation.
  */
 @ParameterizedClass(allowZeroInvocations = true)
-@ArgumentsSource(UrlShortenerServiceFactoryArgumentsProvider.class)
-@EnabledIfEnvironmentVariable(named = "CURRENT_DATE", matches = "2026-09-[0-2][0-9]")
-class LinksApiTest {
+@MethodSource("serviceDaoPairs")
+@EnabledIfEnvironmentVariable(named = "CURRENT_DATE", matches = "2026-(09-28|09-29|09-30|10-01|10-02|10-03|10-04|10-05|10-06)")
+class RemoteDaoLinksTest {
     private static final HttpClient HTTP_CLIENT = HttpClient.newHttpClient();
-    public static final String INVALID_LINK_ID = "invalid-id";
-    public static final String INVALID_LONG_LINK = "not-a-valid-link";
-    public static final String LINKS_PATH = "/v0/links/";
+    public static final int PACKAGE_PREFIX_LEN = "company.vk.edu.distrib.compute.".length();
 
-    @Parameter
+    @Parameter(0)
     AbstractHttpServiceFactory<? extends UrlShortenerService> serviceFactory;
+
+    @Parameter(1)
+    RemoteDaoFactory<String> remoteDaoFactory;
+
+    int port;
+
+    UrlShortenerService service;
+
+    Dao<String> remoteDao;
+
+    @BeforeEach
+    void setup() throws IOException {
+        this.port = randomPort();
+        this.service = serviceFactory.create(port);
+        this.remoteDao = remoteDaoFactory.create(randomPort());
+        service.setLinksDao(remoteDao);
+    }
 
     @AfterAll
     public static void afterAll() {
         HTTP_CLIENT.close();
     }
 
-    public static HttpResponse<String> getLinks(String id) {
-        return getLinks(id, TestUtils.TEST_CREDENTIALS);
-    }
-
-    public static HttpResponse<String> getLinks(String id, TestUtils.Credentials credentials) {
-        return TestUtils.get(credentials, LINKS_PATH + id, String.class);
-    }
-
-    public static HttpResponse<Void> updateLink(String id, String longLink) {
-        return updateLink(id, longLink, TestUtils.TEST_CREDENTIALS);
-    }
-
-    public static HttpResponse<Void> updateLink(String id, String longLink, TestUtils.Credentials credentials) {
-        return TestUtils.update(credentials, LINKS_PATH + id, isOfString(longLink));
-    }
-
-    public static HttpResponse<Void> deleteLink(String id) {
-        return deleteLink(id, TestUtils.TEST_CREDENTIALS);
-    }
-
-    public static HttpResponse<Void> deleteLink(String id, TestUtils.Credentials credentials) {
-        return TestUtils.delete(credentials, LINKS_PATH + id);
-    }
-
-    public static HttpResponse<String> createLink(String longLink) {
-        return createLink(longLink, TestUtils.TEST_CREDENTIALS);
-    }
-
-    public static HttpResponse<String> createLink(String longLink, TestUtils.Credentials credentials) {
-        return TestUtils.post(credentials, "/v0/links", longLink);
-    }
-
     @Test
     void getAbsent() {
         assertTimeoutPreemptively(TIMEOUT, () -> {
-            int port = randomPort();
-            var service = serviceFactory.create(port);
             try {
+                remoteDao.delete(TEST_LINK_ID);
                 service.start();
                 runHttpCtx(HTTP_CLIENT, port, () -> {
                     tryCreateTestUser();
+                    assertThrows(NoSuchElementException.class, () -> remoteDao.get(TEST_LINK_ID));
                     assertEquals(404, getLinks(TEST_LINK_ID).statusCode());
                 });
             } finally {
@@ -100,8 +103,6 @@ class LinksApiTest {
     @Test
     void createAndGet() {
         assertTimeoutPreemptively(TIMEOUT, () -> {
-            int port = randomPort();
-            var service = serviceFactory.create(port);
             try {
                 service.start();
                 runHttpCtx(HTTP_CLIENT, port, () -> {
@@ -113,45 +114,12 @@ class LinksApiTest {
                     assertEquals(CONTENT_TYPE_TEXT, header(createResponse, "Content-Type"));
 
                     String id = extractId(port, createResponse.body());
+                    assertDoesNotThrow(() -> remoteDao.get(id));
 
                     HttpResponse<String> getResponse = getLinks(id);
                     assertEquals(200, getResponse.statusCode());
                     assertEquals(CONTENT_TYPE_TEXT, header(getResponse, "Content-Type"));
                     assertEquals(longLink, getResponse.body());
-                });
-            } finally {
-                service.stop();
-            }
-        });
-    }
-
-    @Test
-    void createInvalidLink() {
-        assertTimeoutPreemptively(TIMEOUT, () -> {
-            int port = randomPort();
-            var service = serviceFactory.create(port);
-            try {
-                service.start();
-                runHttpCtx(HTTP_CLIENT, port, () -> {
-                    tryCreateTestUser();
-                    assertEquals(422, createLink(INVALID_LONG_LINK).statusCode());
-                });
-            } finally {
-                service.stop();
-            }
-        });
-    }
-
-    @Test
-    void getInvalidId() {
-        assertTimeoutPreemptively(TIMEOUT, () -> {
-            int port = randomPort();
-            var service = serviceFactory.create(port);
-            try {
-                service.start();
-                runHttpCtx(HTTP_CLIENT, port, () -> {
-                    tryCreateTestUser();
-                    assertEquals(422, getLinks(INVALID_LINK_ID).statusCode());
                 });
             } finally {
                 service.stop();
@@ -172,44 +140,11 @@ class LinksApiTest {
                     String originalLink = TEST_LONG_LINK;
                     String updatedLink = TEST_LONG_LINK_2;
                     String id = extractId(port, createLink(originalLink).body());
+                    assertDoesNotThrow(() -> remoteDao.get(id));
 
                     assertEquals(200, updateLink(id, updatedLink).statusCode());
                     assertEquals(updatedLink, getLinks(id).body());
-                });
-            } finally {
-                service.stop();
-            }
-        });
-    }
-
-    @Test
-    void updateInvalidId() {
-        assertTimeoutPreemptively(TIMEOUT, () -> {
-            int port = randomPort();
-            var service = serviceFactory.create(port);
-            try {
-                service.start();
-                runHttpCtx(HTTP_CLIENT, port, () -> {
-                    tryCreateTestUser();
-                    assertEquals(422, updateLink(INVALID_LINK_ID, TEST_LONG_LINK).statusCode());
-                });
-            } finally {
-                service.stop();
-            }
-        });
-    }
-
-    @Test
-    void updateInvalidLink() {
-        assertTimeoutPreemptively(TIMEOUT, () -> {
-            int port = randomPort();
-            var service = serviceFactory.create(port);
-            try {
-                service.start();
-                runHttpCtx(HTTP_CLIENT, port, () -> {
-                    tryCreateTestUser();
-                    String id = extractId(port, createLink(TEST_LONG_LINK).body());
-                    assertEquals(422, updateLink(id, INVALID_LONG_LINK).statusCode());
+                    assertEquals(updatedLink, remoteDao.get(id));
                 });
             } finally {
                 service.stop();
@@ -236,23 +171,6 @@ class LinksApiTest {
     }
 
     @Test
-    void deleteInvalidId() {
-        assertTimeoutPreemptively(TIMEOUT, () -> {
-            int port = randomPort();
-            var service = serviceFactory.create(port);
-            try {
-                service.start();
-                runHttpCtx(HTTP_CLIENT, port, () -> {
-                    tryCreateTestUser();
-                    assertEquals(422, deleteLink(INVALID_LINK_ID).statusCode());
-                });
-            } finally {
-                service.stop();
-            }
-        });
-    }
-
-    @Test
     void delete() {
         assertTimeoutPreemptively(TIMEOUT, () -> {
             int port = randomPort();
@@ -265,6 +183,7 @@ class LinksApiTest {
                     String id = extractId(port, createLink(TEST_LONG_LINK).body());
 
                     assertEquals(202, deleteLink(id).statusCode());
+                    assertThrows(NoSuchElementException.class, () -> remoteDao.get(id));
                     assertEquals(404, getLinks(id).statusCode());
                 });
             } finally {
@@ -279,6 +198,7 @@ class LinksApiTest {
             int port = randomPort();
             var service = serviceFactory.create(port);
             try {
+                remoteDao.delete(TEST_LINK_ID);
                 service.start();
                 runHttpCtx(HTTP_CLIENT, port, () -> {
                     tryCreateTestUser();
@@ -301,6 +221,7 @@ class LinksApiTest {
                     tryCreateTestUser();
 
                     String id = extractId(port, createLink(TEST_LONG_LINK).body());
+                    assertDoesNotThrow(() -> remoteDao.get(id));
                     HttpResponse<String> response = get("/" + id);
                     assertEquals(301, response.statusCode());
                     assertEquals(TEST_LONG_LINK, header(response, "Location"));
@@ -318,7 +239,6 @@ class LinksApiTest {
             var service = serviceFactory.create(port);
             try {
                 service.start();
-
                 runHttpCtx(HTTP_CLIENT, port, () -> assertEquals(404, get("/oops123456").statusCode()));
             } finally {
                 service.stop();
@@ -326,18 +246,24 @@ class LinksApiTest {
         });
     }
 
-    @Test
-    void redirectInvalidId() {
-        assertTimeoutPreemptively(TIMEOUT, () -> {
-            int port = randomPort();
-            var service = serviceFactory.create(port);
-            try {
-                service.start();
+    static Stream<Arguments> serviceDaoPairs() {
+        final var kvServiceFactories = groupByPackageName(findAnnotatedFactories(KVServiceTest.class));
+        final var remoteDaoFactories = groupByPackageName(findAnnotatedFactories(RemoteDaoFactoryTest.class));
+        return kvServiceFactories.entrySet().stream()
+            .map(it -> Arguments.of(it.getValue(), Objects.requireNonNull(remoteDaoFactories.get(it.getKey()))));
+    }
 
-                runHttpCtx(HTTP_CLIENT, port, () -> assertEquals(422, get("/" + INVALID_LINK_ID).statusCode()));
-            } finally {
-                service.stop();
-            }
-        });
+    static Map<String, Class<?>> groupByPackageName(Collection<Class<?>> classes) {
+        return classes.stream().collect(Collectors.toMap(
+            clazz -> extractUsername(clazz.getPackageName()),
+            Function.identity(),
+            (x, _) -> x
+        ));
+    }
+
+    static String extractUsername(String packageName) {
+        var withoutPrefix = packageName.substring(PACKAGE_PREFIX_LEN);
+        return withoutPrefix.substring(0, withoutPrefix.indexOf("."));
     }
 }
+
