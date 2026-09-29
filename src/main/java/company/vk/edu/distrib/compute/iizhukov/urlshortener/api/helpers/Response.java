@@ -9,10 +9,6 @@ public record Response(int status, String content, Map<String, String> headers) 
         headers = Map.copyOf(headers);
     }
 
-    private Response(Builder builder) {
-        this(builder.status.code(), builder.content, builder.headers);
-    }
-
     public int length() {
         return content.getBytes(StandardCharsets.UTF_8).length;
     }
@@ -48,7 +44,7 @@ public record Response(int status, String content, Map<String, String> headers) 
         }
 
         public Response build() {
-            return new Response(this);
+            return new Response(status.code(), content, headers);
         }
     }
 }

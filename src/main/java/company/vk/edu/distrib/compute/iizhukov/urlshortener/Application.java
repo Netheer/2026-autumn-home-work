@@ -44,7 +44,9 @@ public class Application implements UrlShortenerService {
             var instance = controller.apply(port);
 
             Objects.requireNonNull(server).createContext(instance.path(), instance.handler(middlewares));
-            log.info("Controller " + instance.getClass().getName() + " was registered");
+            if (log.isInfoEnabled()) { // codacy...
+                log.info("Controller {} was registered", instance.getClass().getName());
+            }
         });
     }
 

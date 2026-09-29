@@ -10,28 +10,22 @@ import company.vk.edu.distrib.compute.Dao;
 import company.vk.edu.distrib.compute.iizhukov.urlshortener.db.DataValidationUtils;
 import company.vk.edu.distrib.compute.iizhukov.urlshortener.db.FileStorage;
 import company.vk.edu.distrib.compute.iizhukov.urlshortener.db.StorageException;
-import org.jspecify.annotations.Nullable;
 
 public final class LinksDao implements Dao<String> {
-    @Nullable
-    private static LinksDao instance;
+    private static final LinksDao instance = new LinksDao();
     private final Map<String, String> links;
     private final FileStorage storage;
 
-    private LinksDao() throws IOException {
-        storage = new FileStorage(new File("/tmp/iizhukov-urlshortener/links.db"));
-        links = new ConcurrentHashMap<>(storage.read());
+    private LinksDao() {
+        try {
+            storage = new FileStorage(new File("/tmp/iizhukov-urlshortener/links.db"));
+            links = new ConcurrentHashMap<>(storage.read());
+        } catch (IOException e) {
+            throw new StorageException("cant open file", e);
+        }
     }
 
-    public static synchronized LinksDao create() {
-        if (instance == null) {
-            try {
-                instance = new LinksDao();
-            } catch (IOException e) {
-                throw new StorageException("cant open file", e);
-            }
-        }
-
+    public static LinksDao create() {
         return instance;
     }
 
