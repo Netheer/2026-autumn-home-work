@@ -14,6 +14,14 @@ final class UrlShortenerHandlers {
     private static final String ID_ALPHABET =
             "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
     private static final int ID_LENGTH = 10;
+    private static final String STATUS_PATH = "/v0/status";
+    private static final String LINKS_PATH = "/v0/links";
+    private static final String LINKS_PREFIX = "/v0/links/";
+
+    private static final String GET_METHOD = "GET";
+    private static final String POST_METHOD = "POST";
+    private static final String PUT_METHOD = "PUT";
+    private static final String DELETE_METHOD = "DELETE";
 
     private final int port;
     private final Dao<String> linksDao;
@@ -28,11 +36,11 @@ final class UrlShortenerHandlers {
 
     void handleStatus(HttpExchange exchange) throws IOException {
         try (exchange) {
-            if (!"/v0/status".equals(exchange.getRequestURI().getPath())) {
+            if (!STATUS_PATH.equals(exchange.getRequestURI().getPath())) {
                 exchange.sendResponseHeaders(404, -1);
                 return;
             }
-            if (!"GET".equals(exchange.getRequestMethod())) {
+            if (!GET_METHOD.equals(exchange.getRequestMethod())) {
                 sendMethodNotAllowed(exchange, "GET");
                 return;
             }
@@ -78,31 +86,26 @@ final class UrlShortenerHandlers {
             String path = exchange.getRequestURI().getPath();
             String method = exchange.getRequestMethod();
 
-            if ("/v0/links".equals(path)) {
-                if ("POST".equals(method)) {
-                    createLink(exchange);
-                } else {
-                    sendMethodNotAllowed(exchange, "POST");
-                }
+            if (LINKS_PATH.equals(path)) {
+                handleLinksCollection(exchange, method);
                 return;
             }
 
-            String prefix = "/v0/links/";
-            if (!path.startsWith(prefix)) {
+            if (!path.startsWith(LINKS_PREFIX)) {
                 exchange.sendResponseHeaders(404, -1);
                 return;
             }
 
-            String id = path.substring(prefix.length());
+            String id = path.substring(LINKS_PREFIX.length());
             if (!isValidId(id)) {
                 exchange.sendResponseHeaders(422, -1);
                 return;
             }
 
             switch (method) {
-                case "GET" -> getLink(exchange, id);
-                case "PUT" -> updateLink(exchange, id);
-                case "DELETE" -> deleteLink(exchange, id);
+                case GET_METHOD -> getLink(exchange, id);
+                case PUT_METHOD -> updateLink(exchange, id);
+                case DELETE_METHOD -> deleteLink(exchange, id);
                 default -> sendMethodNotAllowed(exchange, "GET, PUT, DELETE");
             }
         }
@@ -163,8 +166,8 @@ final class UrlShortenerHandlers {
 
     void handleRedirect(HttpExchange exchange) throws IOException {
         try (exchange) {
-            if (!"GET".equals(exchange.getRequestMethod())) {
-                sendMethodNotAllowed(exchange, "GET");
+            if (!GET_METHOD.equals(exchange.getRequestMethod())) {
+                sendMethodNotAllowed(exchange, GET_METHOD);
                 return;
             }
 
@@ -212,5 +215,13 @@ final class UrlShortenerHandlers {
 
     private String readBody(HttpExchange exchange) throws IOException {
         return new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+    }
+
+    private void handleLinksCollection(HttpExchange exchange, String method) throws IOException {
+        if (POST_METHOD.equals(method)) {
+            createLink(exchange);
+        } else {
+            sendMethodNotAllowed(exchange, POST_METHOD);
+        }
     }
 }

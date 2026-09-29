@@ -9,6 +9,8 @@ import java.util.Base64;
 import java.util.NoSuchElementException;
 
 public class UrlShortenerAuth {
+    private static final String USERS_PATH = "/internal/users";
+    private static final String POST_METHOD = "POST";
     private final Dao<String> usersDao;
 
     UrlShortenerAuth(Dao<String> usersDao) {
@@ -21,12 +23,12 @@ public class UrlShortenerAuth {
 
     void handleUsers(HttpExchange exchange) throws IOException {
         try (exchange) {
-            if (!"/internal/users".equals(exchange.getRequestURI().getPath())) {
+            if (!USERS_PATH.equals(exchange.getRequestURI().getPath())) {
                 exchange.sendResponseHeaders(404, -1);
                 return;
             }
 
-            if (!"POST".equals(exchange.getRequestMethod())) {
+            if (!POST_METHOD.equals(exchange.getRequestMethod())) {
                 sendMethodNotAllowed(exchange, "POST");
                 return;
             }
