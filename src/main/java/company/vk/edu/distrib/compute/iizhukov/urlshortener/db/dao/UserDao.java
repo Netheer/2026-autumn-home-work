@@ -11,7 +11,7 @@ import company.vk.edu.distrib.compute.iizhukov.urlshortener.db.FileStorage;
 import company.vk.edu.distrib.compute.iizhukov.urlshortener.db.StorageException;
 
 public final class UserDao implements Dao<String> {
-    private static final UserDao instance = new UserDao();
+    private static final UserDao INSTANCE = new UserDao();
     private final Map<String, String> users;
     private final FileStorage storage;
 
@@ -25,7 +25,7 @@ public final class UserDao implements Dao<String> {
     }
 
     public static UserDao create() {
-        return instance;
+        return INSTANCE;
     }
 
     @Override

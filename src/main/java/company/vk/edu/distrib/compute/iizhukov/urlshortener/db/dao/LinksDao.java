@@ -12,7 +12,7 @@ import company.vk.edu.distrib.compute.iizhukov.urlshortener.db.FileStorage;
 import company.vk.edu.distrib.compute.iizhukov.urlshortener.db.StorageException;
 
 public final class LinksDao implements Dao<String> {
-    private static final LinksDao instance = new LinksDao();
+    private static final LinksDao INSTANCE = new LinksDao();
     private final Map<String, String> links;
     private final FileStorage storage;
 
@@ -26,7 +26,7 @@ public final class LinksDao implements Dao<String> {
     }
 
     public static LinksDao create() {
-        return instance;
+        return INSTANCE;
     }
 
     @Override
