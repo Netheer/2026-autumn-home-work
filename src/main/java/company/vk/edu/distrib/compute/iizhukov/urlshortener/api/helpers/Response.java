@@ -1,35 +1,20 @@
 package company.vk.edu.distrib.compute.iizhukov.urlshortener.api.helpers;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-public final class Response {
-    private final int status;
-    private final String content;
-    private final int length;
-    private final Map<String, String> headers;
+public record Response(int status, String content, Map<String, String> headers) {
+    public Response {
+        headers = Map.copyOf(headers);
+    }
 
     private Response(Builder builder) {
-        status = builder.status.code();
-        content = builder.content;
-        length = builder.content.length();
-        headers = builder.headers;
-    }
-
-    public int status() {
-        return status;
-    }
-
-    public String content() {
-        return content;
+        this(builder.status.code(), builder.content, builder.headers);
     }
 
     public int length() {
-        return length;
-    }
-
-    public Map<String, String> headers() {
-        return headers;
+        return content.getBytes(StandardCharsets.UTF_8).length;
     }
 
     public static Builder builder() {

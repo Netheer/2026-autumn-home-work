@@ -65,10 +65,7 @@ public abstract class BaseController {
         Handler result = handler;
 
         for (int i = middlewares.size() - 1; i >= 0; i--) {
-            Middleware middleware = middlewares.get(i);
-            Handler next = result;
-
-            result = request -> middleware.handle(request, next);
+            result = middlewares.get(i).apply(result);
         }
 
         return result;

@@ -7,69 +7,21 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import com.sun.net.httpserver.HttpExchange;
 
-public final class Request {
-    private final String path;
-    private final String body;
-    private final Map<String, String> headers;
-
-    private Request(Builder builder) {
-        path = builder.path;
-        body = builder.body;
-        headers = builder.headers;
-    }
-
-    public String path() {
-        return path;
-    }
-
-    public String body() {
-        return body;
-    }
-
-    public Map<String, String> headers() {
-        return headers;
+public record Request(String path, String body, Map<String, String> headers) {
+    public Request {
+        headers = Map.copyOf(headers);
     }
 
     public static Request from(HttpExchange exchange) throws IOException {
-        var builder = new Builder()
-                .setPath(exchange.getRequestURI().getPath())
-                .setBody(new String(
-                        exchange.getRequestBody().readAllBytes(),
-                        StandardCharsets.UTF_8
-                ));
+        var headers = new ConcurrentHashMap<String, String>();
 
         exchange.getRequestHeaders().forEach((key, values) ->
-                builder.addHeader(key, values.getFirst()));
+                headers.put(key, values.getFirst()));
 
-        return builder.build();
-    }
-
-    public static final class Builder {
-        private String path = "";
-        private String body = "";
-        private final Map<String, String> headers = new ConcurrentHashMap<>();
-
-        private Builder() {
-
-        }
-
-        public Builder setPath(String path) {
-            this.path = path;
-            return this;
-        }
-
-        public Builder setBody(String body) {
-            this.body = body;
-            return this;
-        }
-
-        public Builder addHeader(String key, String value) {
-            this.headers.put(key, value);
-            return this;
-        }
-
-        public Request build() {
-            return new Request(this);
-        }
+        return new Request(
+                exchange.getRequestURI().getPath(),
+                new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8),
+                headers
+        );
     }
 }

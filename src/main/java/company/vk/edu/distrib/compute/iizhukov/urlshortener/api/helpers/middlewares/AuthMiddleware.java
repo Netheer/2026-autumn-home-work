@@ -7,7 +7,6 @@ import java.util.NoSuchElementException;
 import company.vk.edu.distrib.compute.iizhukov.urlshortener.api.helpers.Handler;
 import company.vk.edu.distrib.compute.iizhukov.urlshortener.api.helpers.HttpStatus;
 import company.vk.edu.distrib.compute.iizhukov.urlshortener.api.helpers.Middleware;
-import company.vk.edu.distrib.compute.iizhukov.urlshortener.api.helpers.Request;
 import company.vk.edu.distrib.compute.iizhukov.urlshortener.api.helpers.Response;
 import company.vk.edu.distrib.compute.iizhukov.urlshortener.db.dao.UserDao;
 
@@ -15,41 +14,43 @@ public class AuthMiddleware implements Middleware {
     private final UserDao dao = UserDao.create();
 
     @Override
-    public Response handle(Request request, Handler handler) {
-        var authPayload = request.headers().get("Authorization");
+    public Handler apply(Handler handler) {
+        return request -> {
+            var authPayload = request.headers().get("Authorization");
 
-        if (authPayload == null || !authPayload.startsWith("Basic ")) {
-            return Response.builder()
-                    .setStatus(HttpStatus.UNAUTHORIZED)
-                    .build();
-        }
-        var token = authPayload.substring("Basic ".length());
+            if (authPayload == null || !authPayload.startsWith("Basic ")) {
+                return Response.builder()
+                        .setStatus(HttpStatus.UNAUTHORIZED)
+                        .build();
+            }
+            var token = authPayload.substring("Basic ".length());
 
-        var data = new String(
-                Base64.getDecoder().decode(token),
-                StandardCharsets.UTF_8
-        ).split(":");
+            var data = new String(
+                    Base64.getDecoder().decode(token),
+                    StandardCharsets.UTF_8
+            ).split(":");
 
-        var user = data[0];
-        var password = data[1];
+            var user = data[0];
+            var password = data[1];
 
-        final String oldHash;
-        try {
-            oldHash = dao.get(user);
-        } catch (NoSuchElementException e) {
-            return Response.builder()
-                    .setStatus(HttpStatus.UNAUTHORIZED)
-                    .build();
-        }
+            final String oldHash;
+            try {
+                oldHash = dao.get(user);
+            } catch (NoSuchElementException e) {
+                return Response.builder()
+                        .setStatus(HttpStatus.UNAUTHORIZED)
+                        .build();
+            }
 
-        var newHash = Integer.toString(password.hashCode());
+            var newHash = Integer.toString(password.hashCode());
 
-        if (!oldHash.equals(newHash)) {
-            return Response.builder()
-                    .setStatus(HttpStatus.UNAUTHORIZED)
-                    .build();
-        }
+            if (!oldHash.equals(newHash)) {
+                return Response.builder()
+                        .setStatus(HttpStatus.UNAUTHORIZED)
+                        .build();
+            }
 
-        return handler.handle(request);
+            return handler.handle(request);
+        };
     }
 }
