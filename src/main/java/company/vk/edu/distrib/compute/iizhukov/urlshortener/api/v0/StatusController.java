@@ -21,19 +21,4 @@ public class StatusController extends BaseController {
                 .setStatus(HttpStatus.OK)
                 .build();
     }
-
-    @Override
-    public Response post(Request request) {
-        return null;
-    }
-
-    @Override
-    public Response put(Request request) {
-        return null;
-    }
-
-    @Override
-    public Response delete(Request request) {
-        return null;
-    }
 }

@@ -3,23 +3,23 @@ package company.vk.edu.distrib.compute.iizhukov.urlshortener.db.dao;
 import java.io.File;
 import java.io.IOException;
 import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.concurrent.ConcurrentHashMap;
 
 import company.vk.edu.distrib.compute.Dao;
 import company.vk.edu.distrib.compute.iizhukov.urlshortener.db.FileStorage;
-import company.vk.edu.distrib.compute.iizhukov.urlshortener.db.models.UserModel;
-import org.jspecify.annotations.NonNull;
+import company.vk.edu.distrib.compute.iizhukov.urlshortener.db.StorageException;
+import org.jspecify.annotations.Nullable;
 
-public final class UserDao implements Dao<@NonNull UserModel> {
+public final class UserDao implements Dao<String> {
+    @Nullable
     private static UserDao instance;
-    private final Map<String, UserModel> users;
-    private final FileStorage<UserModel> storage;
+    private final Map<String, String> users;
+    private final FileStorage storage;
 
     private UserDao() throws IOException {
-        storage = new FileStorage<>(
-                new File("database/users.csv"),
-                UserModel.class
-        );
-        users = storage.read();
+        storage = new FileStorage(new File("/tmp/iizhukov-urlshortener/users.db"));
+        users = new ConcurrentHashMap<>(storage.read());
     }
 
     public static synchronized UserDao create() {
@@ -27,7 +27,7 @@ public final class UserDao implements Dao<@NonNull UserModel> {
             try {
                 instance = new UserDao();
             } catch (IOException e) {
-                throw new RuntimeException("cant open file", e);
+                throw new StorageException("cant open file", e);
             }
         }
 
@@ -35,29 +35,33 @@ public final class UserDao implements Dao<@NonNull UserModel> {
     }
 
     @Override
-    public UserModel get(String key) throws IllegalArgumentException {
-        return users.get(key);
+    public String get(String key) throws IllegalArgumentException {
+        var value = users.get(key);
+
+        if (value == null) {
+            throw new NoSuchElementException();
+        }
+
+        return value;
     }
 
     @Override
-    public void upsert(String key, UserModel value) throws IllegalArgumentException {
-        users.put(key, value);
-
+    public void upsert(String key, String value) throws IllegalArgumentException {
         try {
+            users.put(key, value);
             storage.write(users);
         } catch (IOException e) {
-            throw new RuntimeException("cant write file =(", e);
+            throw new StorageException("cant write file =(", e);
         }
     }
 
     @Override
     public void delete(String key) throws IllegalArgumentException {
-        users.remove(key);
-
         try {
+            users.remove(key);
             storage.write(users);
         } catch (IOException e) {
-            throw new RuntimeException("cant write file =(", e);
+            throw new StorageException("cant write file =(", e);
         }
     }
 
@@ -67,7 +71,7 @@ public final class UserDao implements Dao<@NonNull UserModel> {
             storage.write(users);
             storage.close();
         } catch (IOException e) {
-            throw new RuntimeException("cant close file", e);
+            throw new StorageException("cant close file", e);
         }
     }
 }

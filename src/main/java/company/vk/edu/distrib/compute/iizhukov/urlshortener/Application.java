@@ -11,6 +11,8 @@ import javax.annotation.Nullable;
 
 import com.sun.net.httpserver.HttpServer;
 import company.vk.edu.distrib.compute.iizhukov.urlshortener.api.helpers.BaseController;
+import company.vk.edu.distrib.compute.iizhukov.urlshortener.api.helpers.Middleware;
+import company.vk.edu.distrib.compute.iizhukov.urlshortener.api.helpers.middlewares.ErrorHandlingMiddleware;
 import company.vk.edu.distrib.compute.iizhukov.urlshortener.api.v0.IndexController;
 import company.vk.edu.distrib.compute.iizhukov.urlshortener.api.v0.InternalUsersController;
 import company.vk.edu.distrib.compute.iizhukov.urlshortener.api.v0.LinksController;
@@ -21,6 +23,8 @@ import org.slf4j.LoggerFactory;
 
 public class Application implements UrlShortenerService {
     private static final Logger log = LoggerFactory.getLogger(Application.class);
+
+    private final List<Middleware> middlewares = List.of(new ErrorHandlingMiddleware());
 
     private final Collection<IntFunction<BaseController>> registry =
             List.of(
@@ -39,8 +43,8 @@ public class Application implements UrlShortenerService {
         registry.forEach(controller -> {
             var instance = controller.apply(port);
 
-            Objects.requireNonNull(server).createContext(instance.path(), instance);
-            log.info("Controller %s was registered".formatted(controller.getClass().getName()));
+            Objects.requireNonNull(server).createContext(instance.path(), instance.handler(middlewares));
+            log.info("Controller " + instance.getClass().getName() + " was registered");
         });
     }
 

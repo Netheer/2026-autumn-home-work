@@ -2,14 +2,16 @@ package company.vk.edu.distrib.compute.iizhukov.urlshortener.api.helpers;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Function;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 
-public abstract class BaseController implements HttpHandler {
+public abstract class BaseController {
     private final int port;
     private final Map<String, Function<Request, Response>> methods = Map.of(
             "GET", this::get,
@@ -20,41 +22,29 @@ public abstract class BaseController implements HttpHandler {
     private final List<Middleware> middlewares;
 
     public BaseController(int port) {
-        this.port = port;
-        this.middlewares = List.of();
+        this(port, List.of());
     }
 
     public BaseController(int port, List<Middleware> middlewares) {
         this.port = port;
-        this.middlewares = middlewares;
+        this.middlewares = List.copyOf(middlewares);
     }
 
-    @Override
-    public void handle(HttpExchange exchange) throws IOException {
-        var request = Request.from(exchange);
+    public HttpHandler handler(List<Middleware> globalMiddlewares) {
+        var pipeline = new ArrayList<>(globalMiddlewares);
+        pipeline.addAll(middlewares);
+        var allMiddlewares = List.copyOf(pipeline);
+        return exchange -> handle(exchange, allMiddlewares);
+    }
 
-        var method = methods.get(exchange.getRequestMethod());
-        if (method == null) {
-            throw new IOException("invalid method");
+    private void handle(HttpExchange exchange, List<Middleware> allMiddlewares) throws IOException {
+        try (exchange) {
+            var request = Request.from(exchange);
+            var method = methods.getOrDefault(exchange.getRequestMethod(), value -> methodNotAllowed());
+            var handler = chain(value -> Objects.requireNonNull(method.apply(value)), allMiddlewares);
+            var response = handler.handle(request);
+            makeExchange(exchange, response);
         }
-
-        Response response;
-        try {
-            var handler = chain(method::apply, middlewares);
-            response = handler.handle(request);
-
-            if (response == null) {
-                response = Response.builder().build();
-            }
-
-        } catch (IllegalArgumentException e) {
-            response = Response.builder()
-                    .setStatus(HttpStatus.UNPROCESSABLE_CONTENT)
-                    .build();
-        }
-
-        makeExchange(exchange, response);
-        exchange.close();
     }
 
     private void makeExchange(HttpExchange exchange, Response response) throws IOException {
@@ -88,13 +78,27 @@ public abstract class BaseController implements HttpHandler {
         return port;
     }
 
+    private Response methodNotAllowed() {
+        return Response.builder()
+                .setStatus(HttpStatus.METHOD_NOT_ALLOWED)
+                .build();
+    }
+
     public abstract String path();
 
-    public abstract Response get(Request request);
+    public Response get(Request request) {
+        return methodNotAllowed();
+    }
 
-    public abstract Response post(Request request);
+    public Response post(Request request) {
+        return methodNotAllowed();
+    }
 
-    public abstract Response put(Request request);
+    public Response put(Request request) {
+        return methodNotAllowed();
+    }
 
-    public abstract Response delete(Request request);
+    public Response delete(Request request) {
+        return methodNotAllowed();
+    }
 }

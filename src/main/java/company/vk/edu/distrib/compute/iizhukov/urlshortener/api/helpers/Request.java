@@ -38,18 +38,15 @@ public final class Request {
                         StandardCharsets.UTF_8
                 ));
 
-        exchange.getRequestHeaders().keySet().forEach(key ->
-            builder.addHeader(
-                    key,
-                    exchange.getRequestHeaders().get(key).getFirst()
-            ));
+        exchange.getRequestHeaders().forEach((key, values) ->
+                builder.addHeader(key, values.getFirst()));
 
         return builder.build();
     }
 
     public static final class Builder {
-        private String path;
-        private String body;
+        private String path = "";
+        private String body = "";
         private final Map<String, String> headers = new ConcurrentHashMap<>();
 
         private Builder() {

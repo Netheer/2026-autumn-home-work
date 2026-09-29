@@ -4,18 +4,13 @@ import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.RecordComponent;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
-public class FileStorage<T extends Record> implements Closeable {
+public final class FileStorage implements Closeable {
     private final RandomAccessFile file;
-    private final Class<T> type;
 
-    public FileStorage(File file, Class<T> type) throws IOException {
+    public FileStorage(File file) throws IOException {
         File parent = file.getParentFile();
 
         if (parent != null) {
@@ -23,27 +18,24 @@ public class FileStorage<T extends Record> implements Closeable {
         }
 
         this.file = new RandomAccessFile(file, "rw");
-        this.type = type;
     }
 
-    public void write(Map<String, T> data) throws IOException {
-        file.setLength(0);
-        file.writeInt(data.size());
+    @SuppressWarnings("PMD.AvoidSynchronizedStatement")
+    public void write(Map<String, String> data) throws IOException {
+        synchronized (file) {
+            var snapshot = new HashMap<>(data);
+            file.setLength(0);
+            file.writeInt(snapshot.size());
 
-        for (var entry : data.entrySet()) {
-            String key = entry.getKey();
-            T value = entry.getValue();
-
-            file.writeUTF(key);
-
-            for (var item : toArray(value)) {
-                file.writeUTF(item);
+            for (var entry : snapshot.entrySet()) {
+                file.writeUTF(entry.getKey());
+                file.writeUTF(entry.getValue());
             }
         }
     }
 
-    public Map<String, T> read() throws IOException {
-        var result = new HashMap<String, T>();
+    public Map<String, String> read() throws IOException {
+        var result = new HashMap<String, String>();
         file.seek(0);
 
         if (file.length() == 0) {
@@ -53,59 +45,7 @@ public class FileStorage<T extends Record> implements Closeable {
         var count = file.readInt();
 
         for (int i = 0; i < count; ++i) {
-            var key = file.readUTF();
-
-            result.put(
-                    key,
-                    readRecord()
-            );
-        }
-
-        return result;
-    }
-
-    private T readRecord() throws IOException {
-        var count = type.getRecordComponents().length;
-        var values = new String[count];
-
-        for (int i = 0; i < count; ++i) {
-            values[i] = file.readUTF();
-        }
-
-        try {
-            return getConstructor().newInstance((Object[]) values);
-        } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private Constructor<T> getConstructor() {
-        var components = type.getRecordComponents();
-
-        Class<?>[] parameterTypes = Arrays.stream(components)
-                .map(RecordComponent::getType)
-                .toArray(Class<?>[]::new);
-
-        try {
-            return type.getDeclaredConstructor(parameterTypes);
-        } catch (NoSuchMethodException e) {
-            throw new RuntimeException("No such constructor in record", e);
-        }
-    }
-
-    public static String[] toArray(Record record) {
-        var components = record.getClass().getRecordComponents();
-
-        String[] result = new String[components.length];
-
-        for (int i = 0; i < components.length; i++) {
-            try {
-                result[i] = (String) components[i]
-                        .getAccessor()
-                        .invoke(record);
-            } catch (ReflectiveOperationException e) {
-                throw new RuntimeException(e);
-            }
+            result.put(file.readUTF(), file.readUTF());
         }
 
         return result;

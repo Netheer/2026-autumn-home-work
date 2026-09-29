@@ -1,5 +1,7 @@
 package company.vk.edu.distrib.compute.iizhukov.urlshortener.api.v0;
 
+import java.util.NoSuchElementException;
+
 import company.vk.edu.distrib.compute.iizhukov.urlshortener.api.helpers.BaseController;
 import company.vk.edu.distrib.compute.iizhukov.urlshortener.api.helpers.HttpStatus;
 import company.vk.edu.distrib.compute.iizhukov.urlshortener.api.helpers.Request;
@@ -21,32 +23,16 @@ public class IndexController extends BaseController {
     @Override
     public Response get(Request request) {
         var key = request.path().substring(path().length());
-        var model = dao.get(key);
 
-        if (model == null) {
+        try {
+            return Response.builder()
+                    .setStatus(HttpStatus.MOVED_PERMANENTLY)
+                    .addHeader("Location", dao.get(key))
+                    .build();
+        } catch (NoSuchElementException e) {
             return Response.builder()
                     .setStatus(HttpStatus.NOT_FOUND)
                     .build();
         }
-
-        return Response.builder()
-                .setStatus(HttpStatus.MOVED_PERMANENTLY)
-                .addHeader("Location", model.url())
-                .build();
-    }
-
-    @Override
-    public Response post(Request request) {
-        return null;
-    }
-
-    @Override
-    public Response put(Request request) {
-        return null;
-    }
-
-    @Override
-    public Response delete(Request request) {
-        return null;
     }
 }

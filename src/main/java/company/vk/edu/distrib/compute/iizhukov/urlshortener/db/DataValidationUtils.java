@@ -1,11 +1,13 @@
 package company.vk.edu.distrib.compute.iizhukov.urlshortener.db;
 
+import org.jspecify.annotations.Nullable;
+
 public final class DataValidationUtils {
     private DataValidationUtils() {
 
     }
 
-    public static void validateKey(String key) {
+    public static void validateKey(@Nullable String key) {
         if (key == null
                 || key.isEmpty()
                 || key.chars().anyMatch(c -> !Character.isLetterOrDigit(c))
@@ -14,7 +16,7 @@ public final class DataValidationUtils {
         }
     }
 
-    public static void validateUrl(String url) {
+    public static void validateUrl(@Nullable String url) {
         if (url == null
                 || (
                         !url.startsWith("http://")

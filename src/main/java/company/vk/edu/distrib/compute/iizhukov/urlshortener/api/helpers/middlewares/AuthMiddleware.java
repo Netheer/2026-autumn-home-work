@@ -2,6 +2,7 @@ package company.vk.edu.distrib.compute.iizhukov.urlshortener.api.helpers.middlew
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.NoSuchElementException;
 
 import company.vk.edu.distrib.compute.iizhukov.urlshortener.api.helpers.Handler;
 import company.vk.edu.distrib.compute.iizhukov.urlshortener.api.helpers.HttpStatus;
@@ -32,14 +33,16 @@ public class AuthMiddleware implements Middleware {
         var user = data[0];
         var password = data[1];
 
-        if (dao.get(user) == null) {
+        final String oldHash;
+        try {
+            oldHash = dao.get(user);
+        } catch (NoSuchElementException e) {
             return Response.builder()
                     .setStatus(HttpStatus.UNAUTHORIZED)
                     .build();
         }
 
         var newHash = Integer.toString(password.hashCode());
-        var oldHash = dao.get(user).passwordHash();
 
         if (!oldHash.equals(newHash)) {
             return Response.builder()

@@ -3,24 +3,24 @@ package company.vk.edu.distrib.compute.iizhukov.urlshortener.db.dao;
 import java.io.File;
 import java.io.IOException;
 import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.concurrent.ConcurrentHashMap;
 
 import company.vk.edu.distrib.compute.Dao;
 import company.vk.edu.distrib.compute.iizhukov.urlshortener.db.DataValidationUtils;
 import company.vk.edu.distrib.compute.iizhukov.urlshortener.db.FileStorage;
-import company.vk.edu.distrib.compute.iizhukov.urlshortener.db.models.LinkModel;
-import org.jspecify.annotations.NonNull;
+import company.vk.edu.distrib.compute.iizhukov.urlshortener.db.StorageException;
+import org.jspecify.annotations.Nullable;
 
-public final class LinksDao implements Dao<@NonNull LinkModel> {
+public final class LinksDao implements Dao<String> {
+    @Nullable
     private static LinksDao instance;
-    private final Map<String, LinkModel> links;
-    private final FileStorage<LinkModel> storage;
+    private final Map<String, String> links;
+    private final FileStorage storage;
 
     private LinksDao() throws IOException {
-        storage = new FileStorage<>(
-                new File("database/links.csv"),
-                LinkModel.class
-        );
-        links = storage.read();
+        storage = new FileStorage(new File("/tmp/iizhukov-urlshortener/links.db"));
+        links = new ConcurrentHashMap<>(storage.read());
     }
 
     public static synchronized LinksDao create() {
@@ -28,7 +28,7 @@ public final class LinksDao implements Dao<@NonNull LinkModel> {
             try {
                 instance = new LinksDao();
             } catch (IOException e) {
-                throw new RuntimeException("cant open file", e);
+                throw new StorageException("cant open file", e);
             }
         }
 
@@ -36,33 +36,37 @@ public final class LinksDao implements Dao<@NonNull LinkModel> {
     }
 
     @Override
-    public LinkModel get(String key) throws IllegalArgumentException {
+    public String get(String key) throws IllegalArgumentException {
         DataValidationUtils.validateKey(key);
-        return links.get(key);
+        var value = links.get(key);
+
+        if (value == null) {
+            throw new NoSuchElementException();
+        }
+
+        return value;
     }
 
     @Override
-    public void upsert(String key, LinkModel value) throws IllegalArgumentException {
+    public void upsert(String key, String value) throws IllegalArgumentException {
         DataValidationUtils.validateKey(key);
-        DataValidationUtils.validateUrl(value.url());
-        links.put(key, value);
-
+        DataValidationUtils.validateUrl(value);
         try {
+            links.put(key, value);
             storage.write(links);
         } catch (IOException e) {
-            throw new RuntimeException("cant write file =(", e);
+            throw new StorageException("cant write file =(", e);
         }
     }
 
     @Override
     public void delete(String key) throws IllegalArgumentException {
         DataValidationUtils.validateKey(key);
-        links.remove(key);
-
         try {
+            links.remove(key);
             storage.write(links);
         } catch (IOException e) {
-            throw new RuntimeException("cant write file =(", e);
+            throw new StorageException("cant write file =(", e);
         }
     }
 
@@ -72,7 +76,7 @@ public final class LinksDao implements Dao<@NonNull LinkModel> {
             storage.write(links);
             storage.close();
         } catch (IOException e) {
-            throw new RuntimeException("cant close file", e);
+            throw new StorageException("cant close file", e);
         }
     }
 }
