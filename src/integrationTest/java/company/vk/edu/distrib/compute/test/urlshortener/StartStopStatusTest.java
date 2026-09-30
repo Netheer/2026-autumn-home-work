@@ -1,6 +1,7 @@
 package company.vk.edu.distrib.compute.test.urlshortener;
 
 import java.io.IOException;
+import java.net.BindException;
 import java.net.http.HttpClient;
 import java.time.Duration;
 
@@ -8,11 +9,12 @@ import company.vk.edu.distrib.compute.AbstractHttpServiceFactory;
 import company.vk.edu.distrib.compute.test.TestUtils;
 import company.vk.edu.distrib.compute.urlshortener.UrlShortenerService;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.junit.jupiter.params.Parameter;
 import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.ArgumentsSource;
+import org.junitpioneer.jupiter.RetryingTest;
 
 import static company.vk.edu.distrib.compute.test.TestUtils.TIMEOUT;
 import static company.vk.edu.distrib.compute.test.TestUtils.randomPort;
@@ -41,7 +43,7 @@ class StartStopStatusTest {
         HTTP_CLIENT.close();
     }
 
-    @Test
+    @RetryingTest(onExceptions = {BindException.class}, maxAttempts = 10, suspendForMs = 500)
     void create() {
         assertTimeoutPreemptively(TIMEOUT, () -> {
             int port = randomPort();
@@ -53,7 +55,7 @@ class StartStopStatusTest {
         });
     }
 
-    @Test
+    @RetryingTest(onExceptions = {BindException.class}, maxAttempts = 10, suspendForMs = 500)
     void start() {
         assertTimeoutPreemptively(TIMEOUT, () -> {
             int port = randomPort();
@@ -67,7 +69,7 @@ class StartStopStatusTest {
         });
     }
 
-    @Test
+    @RetryingTest(onExceptions = {BindException.class}, maxAttempts = 10, suspendForMs = 500)
     void doubleStartThrows() {
         assertTimeoutPreemptively(TIMEOUT, () -> {
             int port = randomPort();
@@ -81,7 +83,7 @@ class StartStopStatusTest {
         });
     }
 
-    @Test
+    @RetryingTest(onExceptions = {BindException.class}, maxAttempts = 10, suspendForMs = 500)
     void stop() {
         assertTimeoutPreemptively(Duration.ofSeconds(2), () -> {
             int port = randomPort();

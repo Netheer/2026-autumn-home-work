@@ -1,5 +1,6 @@
 package company.vk.edu.distrib.compute.test.urlshortener;
 
+import java.net.BindException;
 import java.net.http.HttpClient;
 import java.net.http.HttpResponse;
 
@@ -7,11 +8,12 @@ import company.vk.edu.distrib.compute.AbstractHttpServiceFactory;
 import company.vk.edu.distrib.compute.test.TestUtils;
 import company.vk.edu.distrib.compute.urlshortener.UrlShortenerService;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.junit.jupiter.params.Parameter;
 import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.ArgumentsSource;
+import org.junitpioneer.jupiter.RetryingTest;
 
 import static company.vk.edu.distrib.compute.test.TestUtils.CONTENT_TYPE_TEXT;
 import static company.vk.edu.distrib.compute.test.TestUtils.TEST_LINK_ID;
@@ -80,7 +82,7 @@ class LinksApiTest {
         return TestUtils.post(credentials, "/v0/links", longLink);
     }
 
-    @Test
+    @RetryingTest(onExceptions = {BindException.class}, maxAttempts = 10, suspendForMs = 500)
     void getAbsent() {
         assertTimeoutPreemptively(TIMEOUT, () -> {
             int port = randomPort();
@@ -97,7 +99,7 @@ class LinksApiTest {
         });
     }
 
-    @Test
+    @RetryingTest(onExceptions = {BindException.class}, maxAttempts = 10, suspendForMs = 500)
     void createAndGet() {
         assertTimeoutPreemptively(TIMEOUT, () -> {
             int port = randomPort();
@@ -125,7 +127,7 @@ class LinksApiTest {
         });
     }
 
-    @Test
+    @RetryingTest(onExceptions = {BindException.class}, maxAttempts = 10, suspendForMs = 500)
     void createInvalidLink() {
         assertTimeoutPreemptively(TIMEOUT, () -> {
             int port = randomPort();
@@ -142,7 +144,7 @@ class LinksApiTest {
         });
     }
 
-    @Test
+    @RetryingTest(onExceptions = {BindException.class}, maxAttempts = 10, suspendForMs = 500)
     void getInvalidId() {
         assertTimeoutPreemptively(TIMEOUT, () -> {
             int port = randomPort();
@@ -159,7 +161,7 @@ class LinksApiTest {
         });
     }
 
-    @Test
+    @RetryingTest(onExceptions = {BindException.class}, maxAttempts = 10, suspendForMs = 500)
     void update() {
         assertTimeoutPreemptively(TIMEOUT, () -> {
             int port = randomPort();
@@ -182,7 +184,7 @@ class LinksApiTest {
         });
     }
 
-    @Test
+    @RetryingTest(onExceptions = {BindException.class}, maxAttempts = 10, suspendForMs = 500)
     void updateInvalidId() {
         assertTimeoutPreemptively(TIMEOUT, () -> {
             int port = randomPort();
@@ -199,7 +201,7 @@ class LinksApiTest {
         });
     }
 
-    @Test
+    @RetryingTest(onExceptions = {BindException.class}, maxAttempts = 10, suspendForMs = 500)
     void updateInvalidLink() {
         assertTimeoutPreemptively(TIMEOUT, () -> {
             int port = randomPort();
@@ -217,7 +219,7 @@ class LinksApiTest {
         });
     }
 
-    @Test
+    @RetryingTest(onExceptions = {BindException.class}, maxAttempts = 10, suspendForMs = 500)
     void updateAbsent() {
         assertTimeoutPreemptively(TIMEOUT, () -> {
             int port = randomPort();
@@ -235,7 +237,7 @@ class LinksApiTest {
         });
     }
 
-    @Test
+    @RetryingTest(onExceptions = {BindException.class}, maxAttempts = 10, suspendForMs = 500)
     void deleteInvalidId() {
         assertTimeoutPreemptively(TIMEOUT, () -> {
             int port = randomPort();
@@ -252,7 +254,7 @@ class LinksApiTest {
         });
     }
 
-    @Test
+    @RetryingTest(onExceptions = {BindException.class}, maxAttempts = 10, suspendForMs = 500)
     void delete() {
         assertTimeoutPreemptively(TIMEOUT, () -> {
             int port = randomPort();
@@ -273,7 +275,7 @@ class LinksApiTest {
         });
     }
 
-    @Test
+    @RetryingTest(onExceptions = {BindException.class}, maxAttempts = 10, suspendForMs = 500)
     void deleteAbsent() {
         assertTimeoutPreemptively(TIMEOUT, () -> {
             int port = randomPort();
@@ -290,7 +292,7 @@ class LinksApiTest {
         });
     }
 
-    @Test
+    @RetryingTest(onExceptions = {BindException.class}, maxAttempts = 10, suspendForMs = 500)
     void redirect() {
         assertTimeoutPreemptively(TIMEOUT, () -> {
             int port = randomPort();
@@ -311,7 +313,7 @@ class LinksApiTest {
         });
     }
 
-    @Test
+    @RetryingTest(onExceptions = {BindException.class}, maxAttempts = 10, suspendForMs = 500)
     void redirectAbsent() {
         assertTimeoutPreemptively(TIMEOUT, () -> {
             int port = randomPort();
@@ -326,7 +328,7 @@ class LinksApiTest {
         });
     }
 
-    @Test
+    @RetryingTest(onExceptions = {BindException.class}, maxAttempts = 10, suspendForMs = 500)
     void redirectInvalidId() {
         assertTimeoutPreemptively(TIMEOUT, () -> {
             int port = randomPort();
