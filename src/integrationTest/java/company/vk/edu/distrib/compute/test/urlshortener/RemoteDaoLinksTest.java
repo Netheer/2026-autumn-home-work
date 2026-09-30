@@ -14,10 +14,10 @@ import java.util.stream.Stream;
 import company.vk.edu.distrib.compute.AbstractHttpServiceFactory;
 import company.vk.edu.distrib.compute.Dao;
 import company.vk.edu.distrib.compute.kv.KVService;
-import company.vk.edu.distrib.compute.kv.KVServiceTest;
 import company.vk.edu.distrib.compute.kv.RemoteDaoFactory;
 import company.vk.edu.distrib.compute.kv.RemoteDaoFactoryTest;
 import company.vk.edu.distrib.compute.urlshortener.UrlShortenerService;
+import company.vk.edu.distrib.compute.urlshortener.UrlShortenerTest;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -26,6 +26,7 @@ import org.junit.jupiter.params.Parameter;
 import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.platform.commons.util.ReflectionUtils;
 
 import static company.vk.edu.distrib.compute.test.AbstractArgumentsProvider.findAnnotatedFactories;
 import static company.vk.edu.distrib.compute.test.TestUtils.CONTENT_TYPE_TEXT;
@@ -130,8 +131,6 @@ class RemoteDaoLinksTest {
     @Test
     void update() {
         assertTimeoutPreemptively(TIMEOUT, () -> {
-            int port = randomPort();
-            var service = serviceFactory.create(port);
             try {
                 service.start();
                 runHttpCtx(HTTP_CLIENT, port, () -> {
@@ -155,8 +154,6 @@ class RemoteDaoLinksTest {
     @Test
     void updateAbsent() {
         assertTimeoutPreemptively(TIMEOUT, () -> {
-            int port = randomPort();
-            var service = serviceFactory.create(port);
             try {
                 service.start();
                 runHttpCtx(HTTP_CLIENT, port, () -> {
@@ -173,8 +170,6 @@ class RemoteDaoLinksTest {
     @Test
     void delete() {
         assertTimeoutPreemptively(TIMEOUT, () -> {
-            int port = randomPort();
-            var service = serviceFactory.create(port);
             try {
                 service.start();
                 runHttpCtx(HTTP_CLIENT, port, () -> {
@@ -195,8 +190,6 @@ class RemoteDaoLinksTest {
     @Test
     void deleteAbsent() {
         assertTimeoutPreemptively(TIMEOUT, () -> {
-            int port = randomPort();
-            var service = serviceFactory.create(port);
             try {
                 remoteDao.delete(TEST_LINK_ID);
                 service.start();
@@ -213,8 +206,6 @@ class RemoteDaoLinksTest {
     @Test
     void redirect() {
         assertTimeoutPreemptively(TIMEOUT, () -> {
-            int port = randomPort();
-            var service = serviceFactory.create(port);
             try {
                 service.start();
                 runHttpCtx(HTTP_CLIENT, port, () -> {
@@ -235,8 +226,6 @@ class RemoteDaoLinksTest {
     @Test
     void redirectAbsent() {
         assertTimeoutPreemptively(TIMEOUT, () -> {
-            int port = randomPort();
-            var service = serviceFactory.create(port);
             try {
                 service.start();
                 runHttpCtx(HTTP_CLIENT, port, () -> assertEquals(404, get("/oops123456").statusCode()));
@@ -247,10 +236,13 @@ class RemoteDaoLinksTest {
     }
 
     static Stream<Arguments> serviceDaoPairs() {
-        final var kvServiceFactories = groupByPackageName(findAnnotatedFactories(KVServiceTest.class));
+        final var urlShortenerServiceFactories = groupByPackageName(findAnnotatedFactories(UrlShortenerTest.class));
         final var remoteDaoFactories = groupByPackageName(findAnnotatedFactories(RemoteDaoFactoryTest.class));
-        return kvServiceFactories.entrySet().stream()
-            .map(it -> Arguments.of(it.getValue(), Objects.requireNonNull(remoteDaoFactories.get(it.getKey()))));
+        return urlShortenerServiceFactories.entrySet().stream()
+            .filter(it -> remoteDaoFactories.containsKey(it.getKey()))
+            .map(it -> Arguments.of(
+                ReflectionUtils.newInstance(it.getValue()),
+                ReflectionUtils.newInstance(Objects.requireNonNull(remoteDaoFactories.get(it.getKey())))));
     }
 
     static Map<String, Class<?>> groupByPackageName(Collection<Class<?>> classes) {
