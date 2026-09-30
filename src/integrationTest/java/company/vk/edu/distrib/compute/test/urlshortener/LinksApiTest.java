@@ -33,7 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
  */
 @ParameterizedClass(allowZeroInvocations = true)
 @ArgumentsSource(UrlShortenerServiceFactoryArgumentsProvider.class)
-@EnabledIfEnvironmentVariable(named = "CURRENT_DATE", matches = "2026-09-[0-2][0-9]")
+@EnabledIfEnvironmentVariable(named = "CURRENT_DATE", matches = "2026-(09-28|09-29|09-30|10-01|10-02|10-03|10-04|10-05|10-06)")
 class LinksApiTest {
     private static final HttpClient HTTP_CLIENT = HttpClient.newHttpClient();
     public static final String INVALID_LINK_ID = "invalid-id";
