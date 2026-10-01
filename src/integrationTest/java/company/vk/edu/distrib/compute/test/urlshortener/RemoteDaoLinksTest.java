@@ -21,7 +21,6 @@ import company.vk.edu.distrib.compute.urlshortener.UrlShortenerService;
 import company.vk.edu.distrib.compute.urlshortener.UrlShortenerTest;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.junit.jupiter.params.Parameter;
 import org.junit.jupiter.params.ParameterizedClass;
