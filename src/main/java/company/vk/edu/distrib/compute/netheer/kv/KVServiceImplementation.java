@@ -20,6 +20,10 @@ import java.util.NoSuchElementException;
 public final class KVServiceImplementation implements KVService {
     private static final String STATUS_PATH = "/v0/status";
     private static final String ENTITY_PATH = "/v0/entity";
+    private static final String ID_QUERY_PREFIX = "id=";
+    private static final String GET_METHOD = "GET";
+    private static final String PUT_METHOD = "PUT";
+    private static final String DELETE_METHOD = "DELETE";
     private static final int WORKER_THREADS = 4;
     private static final int HTTP_OK = 200;
     private static final int HTTP_CREATED = 201;
@@ -69,7 +73,7 @@ public final class KVServiceImplementation implements KVService {
                 return;
             }
 
-            if (!"GET".equals(exchange.getRequestMethod())) {
+            if (!GET_METHOD.equals(exchange.getRequestMethod())) {
                 sendEmptyResponse(exchange, HTTP_METHOD_NOT_ALLOWED);
                 return;
             }
@@ -81,23 +85,7 @@ public final class KVServiceImplementation implements KVService {
     private void handleEntity(HttpExchange exchange) throws IOException {
         try (exchange) {
             try {
-                if (!ENTITY_PATH.equals(exchange.getRequestURI().getPath())) {
-                    sendEmptyResponse(exchange, HTTP_NOT_FOUND);
-                    return;
-                }
-
-                String key = extractKey(exchange);
-                if (key == null) {
-                    sendEmptyResponse(exchange, HTTP_BAD_REQUEST);
-                    return;
-                }
-
-                switch (exchange.getRequestMethod()) {
-                    case "GET" -> handleGet(exchange, key);
-                    case "PUT" -> handlePut(exchange, key);
-                    case "DELETE" -> handleDelete(exchange, key);
-                    default -> sendEmptyResponse(exchange, HTTP_METHOD_NOT_ALLOWED);
-                }
+                processEntityRequest(exchange);
             } catch (NoSuchElementException e) {
                 sendEmptyResponse(exchange, HTTP_NOT_FOUND);
             } catch (IllegalArgumentException e) {
@@ -105,6 +93,26 @@ public final class KVServiceImplementation implements KVService {
             } catch (IOException e) {
                 sendEmptyResponse(exchange, HTTP_INTERNAL_SERVER_ERROR);
             }
+        }
+    }
+
+    private void processEntityRequest(HttpExchange exchange) throws IOException {
+        if (!ENTITY_PATH.equals(exchange.getRequestURI().getPath())) {
+            sendEmptyResponse(exchange, HTTP_NOT_FOUND);
+            return;
+        }
+
+        String key = extractKey(exchange);
+        if (key == null) {
+            sendEmptyResponse(exchange, HTTP_BAD_REQUEST);
+            return;
+        }
+
+        switch (exchange.getRequestMethod()) {
+            case GET_METHOD -> handleGet(exchange, key);
+            case PUT_METHOD -> handlePut(exchange, key);
+            case DELETE_METHOD -> handleDelete(exchange, key);
+            default -> sendEmptyResponse(exchange, HTTP_METHOD_NOT_ALLOWED);
         }
     }
 
@@ -126,12 +134,11 @@ public final class KVServiceImplementation implements KVService {
 
     private static String extractKey(HttpExchange exchange) {
         String query = exchange.getRequestURI().getRawQuery();
-
-        if (query == null || !query.startsWith("id=") || query.contains("&")) {
+        if (query == null || !query.startsWith(ID_QUERY_PREFIX) || query.contains("&")) {
             return null;
         }
 
-        String encodedKey = query.substring("id=".length());
+        String encodedKey = query.substring(ID_QUERY_PREFIX.length());
         if (encodedKey.isEmpty()) {
             return null;
         }

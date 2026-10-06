@@ -7,12 +7,15 @@ import company.vk.edu.distrib.compute.urlshortener.UrlShortenerService;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.InetSocketAddress;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class UrlShortenerServiceImplementation implements UrlShortenerService {
     private Dao<String> linksDao;
     private final Dao<String> usersDao;
     private final HttpServer server;
     private final UrlShortenerHandlers handlers;
+    private final Lock lifecycleLock = new ReentrantLock();
 
     private boolean lifecycleStarted;
 
@@ -35,31 +38,46 @@ public class UrlShortenerServiceImplementation implements UrlShortenerService {
     }
 
     @Override
-    public synchronized void setLinksDao(Dao<String> dao) {
-        if (lifecycleStarted) {
-            throw new IllegalStateException(
-                    "Links DAO can't be changed after service start"
-            );
+    public void setLinksDao(Dao<String> dao) {
+        lifecycleLock.lock();
+        try {
+            if (lifecycleStarted) {
+                throw new IllegalStateException(
+                        "Links DAO can't be changed after service start"
+                );
+            }
+
+            linksDao = dao;
+            handlers.setLinksDao(dao);
+        } finally {
+            lifecycleLock.unlock();
         }
-
-        linksDao = dao;
-        handlers.setLinksDao(dao);
     }
 
     @Override
-    public synchronized void start() {
-        lifecycleStarted = true;
-        server.start();
+    public void start() {
+        lifecycleLock.lock();
+        try {
+            lifecycleStarted = true;
+            server.start();
+        } finally {
+            lifecycleLock.unlock();
+        }
     }
 
     @Override
-    public synchronized void stop() {
-        Dao<String> currentLinksDao = linksDao;
+    public void stop() {
+        lifecycleLock.lock();
+        try {
+            Dao<String> currentLinksDao = linksDao;
 
-        try (currentLinksDao; usersDao) {
-            server.stop(0);
-        } catch (IOException exception) {
-            throw new UncheckedIOException(exception);
+            try (currentLinksDao; usersDao) {
+                server.stop(0);
+            } catch (IOException exception) {
+                throw new UncheckedIOException(exception);
+            }
+        } finally {
+            lifecycleLock.unlock();
         }
     }
 }
