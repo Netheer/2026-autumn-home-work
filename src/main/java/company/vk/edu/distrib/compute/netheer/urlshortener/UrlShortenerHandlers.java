@@ -24,7 +24,7 @@ final class UrlShortenerHandlers {
     private static final String DELETE_METHOD = "DELETE";
 
     private final int port;
-    private final Dao<String> linksDao;
+    private Dao<String> linksDao;
     private final UrlShortenerAuth auth;
     private final SecureRandom random = new SecureRandom();
 
@@ -109,6 +109,10 @@ final class UrlShortenerHandlers {
                 default -> sendMethodNotAllowed(exchange, "GET, PUT, DELETE");
             }
         }
+    }
+
+    void setLinksDao(Dao<String> linksDao) {
+        this.linksDao = linksDao;
     }
 
     private void getLink(HttpExchange exchange, String id) throws IOException {

@@ -9,17 +9,23 @@ import java.io.UncheckedIOException;
 import java.net.InetSocketAddress;
 
 public class UrlShortenerServiceImplementation implements UrlShortenerService {
-    private final Dao<String> linksDao;
+    private Dao<String> linksDao;
     private final Dao<String> usersDao;
     private final HttpServer server;
+    private final UrlShortenerHandlers handlers;
 
-    public UrlShortenerServiceImplementation(int port, Dao<String> linksDao, Dao<String> usersDao)
-            throws IOException {
+    private boolean lifecycleStarted;
+
+    public UrlShortenerServiceImplementation(
+            int port,
+            Dao<String> linksDao,
+            Dao<String> usersDao
+    ) throws IOException {
         this.linksDao = linksDao;
         this.usersDao = usersDao;
 
         UrlShortenerAuth auth = new UrlShortenerAuth(usersDao);
-        UrlShortenerHandlers handlers = new UrlShortenerHandlers(port, linksDao, auth);
+        this.handlers = new UrlShortenerHandlers(port, linksDao, auth);
 
         this.server = HttpServer.create(new InetSocketAddress(port), 0);
         server.createContext("/v0/status", handlers::handleStatus);
@@ -29,13 +35,28 @@ public class UrlShortenerServiceImplementation implements UrlShortenerService {
     }
 
     @Override
-    public void start() {
+    public synchronized void setLinksDao(Dao<String> dao) {
+        if (lifecycleStarted) {
+            throw new IllegalStateException(
+                    "Links DAO can't be changed after service start"
+            );
+        }
+
+        linksDao = dao;
+        handlers.setLinksDao(dao);
+    }
+
+    @Override
+    public synchronized void start() {
+        lifecycleStarted = true;
         server.start();
     }
 
     @Override
-    public void stop() {
-        try (linksDao; usersDao) {
+    public synchronized void stop() {
+        Dao<String> currentLinksDao = linksDao;
+
+        try (currentLinksDao; usersDao) {
             server.stop(0);
         } catch (IOException exception) {
             throw new UncheckedIOException(exception);
