@@ -9,6 +9,8 @@ import java.io.UncheckedIOException;
 import java.net.InetSocketAddress;
 
 public class UrlShortenerServiceImplementation implements UrlShortenerService {
+    private static final int STOP_DELAY_SECONDS = 1;
+
     private final Dao<String> linksDao;
     private final Dao<String> usersDao;
     private final HttpServer server;
@@ -36,7 +38,7 @@ public class UrlShortenerServiceImplementation implements UrlShortenerService {
     @Override
     public void stop() {
         try (linksDao; usersDao) {
-            server.stop(0);
+            server.stop(STOP_DELAY_SECONDS);
         } catch (IOException exception) {
             throw new UncheckedIOException(exception);
         }
