@@ -21,6 +21,7 @@ public final class PersistentDao implements Dao<byte[]> {
     private final Path storagePath;
     private final Map<String, byte[]> data = new ConcurrentHashMap<>();
     private final DataOutputStream output;
+
     private final Lock writeLock = new ReentrantLock();
 
     public PersistentDao(Path storagePath) throws IOException {
