@@ -4,6 +4,7 @@ import com.sun.net.httpserver.HttpExchange;
 import company.vk.edu.distrib.compute.Dao;
 
 import java.io.IOException;
+import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
@@ -14,6 +15,7 @@ final class UrlShortenerHandlers {
     private static final String ID_ALPHABET =
             "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
     private static final int ID_LENGTH = 10;
+    private static final int HTTP_UNPROCESSABLE_ENTITY = 422;
     private static final String STATUS_PATH = "/v0/status";
     private static final String LINKS_PATH = "/v0/links";
     private static final String LINKS_PREFIX = "/v0/links/";
@@ -24,7 +26,7 @@ final class UrlShortenerHandlers {
     private static final String DELETE_METHOD = "DELETE";
 
     private final int port;
-    private Dao<String> linksDao;
+    private final Dao<String> linksDao;
     private final UrlShortenerAuth auth;
     private final SecureRandom random = new SecureRandom();
 
@@ -37,14 +39,14 @@ final class UrlShortenerHandlers {
     void handleStatus(HttpExchange exchange) throws IOException {
         try (exchange) {
             if (!STATUS_PATH.equals(exchange.getRequestURI().getPath())) {
-                exchange.sendResponseHeaders(404, -1);
+                exchange.sendResponseHeaders(HttpURLConnection.HTTP_NOT_FOUND, -1);
                 return;
             }
             if (!GET_METHOD.equals(exchange.getRequestMethod())) {
-                sendMethodNotAllowed(exchange, "GET");
+                sendMethodNotAllowed(exchange, GET_METHOD);
                 return;
             }
-            exchange.sendResponseHeaders(200, -1);
+            exchange.sendResponseHeaders(HttpURLConnection.HTTP_OK, -1);
         }
     }
 
@@ -92,13 +94,13 @@ final class UrlShortenerHandlers {
             }
 
             if (!path.startsWith(LINKS_PREFIX)) {
-                exchange.sendResponseHeaders(404, -1);
+                exchange.sendResponseHeaders(HttpURLConnection.HTTP_NOT_FOUND, -1);
                 return;
             }
 
             String id = path.substring(LINKS_PREFIX.length());
             if (!isValidId(id)) {
-                exchange.sendResponseHeaders(422, -1);
+                exchange.sendResponseHeaders(HTTP_UNPROCESSABLE_ENTITY, -1);
                 return;
             }
 
@@ -106,13 +108,9 @@ final class UrlShortenerHandlers {
                 case GET_METHOD -> getLink(exchange, id);
                 case PUT_METHOD -> updateLink(exchange, id);
                 case DELETE_METHOD -> deleteLink(exchange, id);
-                default -> sendMethodNotAllowed(exchange, "GET, PUT, DELETE");
+                default -> sendMethodNotAllowed(exchange, GET_METHOD + ", " + PUT_METHOD + ", " + DELETE_METHOD);
             }
         }
-    }
-
-    void setLinksDao(Dao<String> linksDao) {
-        this.linksDao = linksDao;
     }
 
     private void getLink(HttpExchange exchange, String id) throws IOException {
@@ -120,18 +118,18 @@ final class UrlShortenerHandlers {
         try {
             url = linksDao.get(id);
         } catch (NoSuchElementException exception) {
-            exchange.sendResponseHeaders(404, -1);
+            exchange.sendResponseHeaders(HttpURLConnection.HTTP_NOT_FOUND, -1);
             return;
         }
 
-        sendText(exchange, 200, url);
+        sendText(exchange, HttpURLConnection.HTTP_OK, url);
     }
 
     private void createLink(HttpExchange exchange) throws IOException {
         String url = readBody(exchange);
 
         if (!isValidUrl(url)) {
-            exchange.sendResponseHeaders(422, -1);
+            exchange.sendResponseHeaders(HTTP_UNPROCESSABLE_ENTITY, -1);
             return;
         }
 
@@ -143,14 +141,14 @@ final class UrlShortenerHandlers {
         linksDao.upsert(id, url);
 
         String shortUrl = "http://localhost:" + port + "/" + id;
-        sendText(exchange, 201, shortUrl);
+        sendText(exchange, HttpURLConnection.HTTP_CREATED, shortUrl);
     }
 
     private void updateLink(HttpExchange exchange, String id) throws IOException {
         String url = readBody(exchange);
 
         if (!isValidUrl(url)) {
-            exchange.sendResponseHeaders(422, -1);
+            exchange.sendResponseHeaders(HTTP_UNPROCESSABLE_ENTITY, -1);
             return;
         }
 
@@ -159,13 +157,13 @@ final class UrlShortenerHandlers {
             linksDao.upsert(id, url);
         }
 
-        exchange.sendResponseHeaders(updated ? 200 : 404, -1);
+        exchange.sendResponseHeaders(updated ? HttpURLConnection.HTTP_OK : HttpURLConnection.HTTP_NOT_FOUND, -1);
     }
 
     private void deleteLink(HttpExchange exchange, String id) throws IOException {
         linksDao.delete(id);
 
-        exchange.sendResponseHeaders(202, -1);
+        exchange.sendResponseHeaders(HttpURLConnection.HTTP_ACCEPTED, -1);
     }
 
     void handleRedirect(HttpExchange exchange) throws IOException {
@@ -177,7 +175,7 @@ final class UrlShortenerHandlers {
 
             String id = exchange.getRequestURI().getPath().substring(1);
             if (!isValidId(id)) {
-                exchange.sendResponseHeaders(422, -1);
+                exchange.sendResponseHeaders(HTTP_UNPROCESSABLE_ENTITY, -1);
                 return;
             }
 
@@ -185,18 +183,18 @@ final class UrlShortenerHandlers {
             try {
                 url = linksDao.get(id);
             } catch (NoSuchElementException exception) {
-                exchange.sendResponseHeaders(404, -1);
+                exchange.sendResponseHeaders(HttpURLConnection.HTTP_NOT_FOUND, -1);
                 return;
             }
 
             exchange.getResponseHeaders().set("Location", url);
-            exchange.sendResponseHeaders(301, -1);
+            exchange.sendResponseHeaders(HttpURLConnection.HTTP_MOVED_PERM, -1);
         }
     }
 
     private void sendMethodNotAllowed(HttpExchange exchange, String allowedMethods) throws IOException {
         exchange.getResponseHeaders().set("Allow", allowedMethods);
-        exchange.sendResponseHeaders(405, -1);
+        exchange.sendResponseHeaders(HttpURLConnection.HTTP_BAD_METHOD, -1);
     }
 
     private String generateId() {

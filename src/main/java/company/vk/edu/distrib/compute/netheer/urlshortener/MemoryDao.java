@@ -30,6 +30,6 @@ public final class MemoryDao implements Dao<String> {
 
     @Override
     public void close() {
-        // There are no resources to close
+        data.clear();
     }
 }
