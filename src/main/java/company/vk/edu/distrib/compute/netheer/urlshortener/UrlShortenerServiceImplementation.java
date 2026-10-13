@@ -7,6 +7,8 @@ import company.vk.edu.distrib.compute.urlshortener.UrlShortenerService;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.InetSocketAddress;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -16,6 +18,8 @@ public class UrlShortenerServiceImplementation implements UrlShortenerService {
     private final HttpServer server;
     private final UrlShortenerHandlers handlers;
     private final Lock lifecycleLock = new ReentrantLock();
+    private static final int WORKER_THREADS = 16;
+    private final ExecutorService executor;
 
     private boolean lifecycleStarted;
 
@@ -31,6 +35,8 @@ public class UrlShortenerServiceImplementation implements UrlShortenerService {
         this.handlers = new UrlShortenerHandlers(port, linksDao, auth);
 
         this.server = HttpServer.create(new InetSocketAddress(port), 0);
+        this.executor = Executors.newFixedThreadPool(WORKER_THREADS);
+        server.setExecutor(executor);
         server.createContext("/v0/status", handlers::handleStatus);
         server.createContext("/v0/links", handlers::handleLinks);
         server.createContext("/internal/users", auth::handleUsers);
@@ -73,6 +79,7 @@ public class UrlShortenerServiceImplementation implements UrlShortenerService {
 
             try (currentLinksDao; usersDao) {
                 server.stop(0);
+                executor.close();
             } catch (IOException exception) {
                 throw new UncheckedIOException(exception);
             }
