@@ -13,6 +13,7 @@ import java.util.Map;
 public class ClusterDao implements Dao<String> {
     private final Map<Integer, RemoteDao> nodes;
 
+    @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
     public ClusterDao(int... ports) {
         this.nodes = new HashMap<>();
 

@@ -13,12 +13,13 @@ public final class LoadTestLauncher {
     private static final int[] SINGLE_PORT = {8081};
     private static final int[] CLUSTER_PORTS = {8081, 8082, 8083};
     private static final int URL_SERVICE_PORT = 8080;
+    private static final int EXPECTED_ARGUMENT_COUNT = 1;
 
     public static void main(String[] args) throws IOException {
         KVServiceFactory factory = new KVServiceFactory();
         List<KVService> nodes = new ArrayList<>();
 
-        if (args.length != 1) {
+        if (args.length != EXPECTED_ARGUMENT_COUNT) {
             throw new IllegalArgumentException("Expected argument: single or cluster");
         }
         int[] ports;
