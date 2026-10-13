@@ -4,6 +4,7 @@ import com.sun.net.httpserver.HttpExchange;
 import company.vk.edu.distrib.compute.Dao;
 
 import java.io.IOException;
+import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.NoSuchElementException;
@@ -11,6 +12,9 @@ import java.util.NoSuchElementException;
 public class UrlShortenerAuth {
     private static final String USERS_PATH = "/internal/users";
     private static final String POST_METHOD = "POST";
+    private static final int FIRST_NON_CONTROL_CHARACTER = 32;
+    private static final int DELETE_CHARACTER = 127;
+    private static final int HTTP_UNPROCESSABLE_ENTITY = 422;
     private final Dao<String> usersDao;
 
     UrlShortenerAuth(Dao<String> usersDao) {
@@ -24,20 +28,21 @@ public class UrlShortenerAuth {
     void handleUsers(HttpExchange exchange) throws IOException {
         try (exchange) {
             if (!USERS_PATH.equals(exchange.getRequestURI().getPath())) {
-                exchange.sendResponseHeaders(404, -1);
+                exchange.sendResponseHeaders(HttpURLConnection.HTTP_NOT_FOUND, -1);
                 return;
             }
 
             if (!POST_METHOD.equals(exchange.getRequestMethod())) {
-                sendMethodNotAllowed(exchange, "POST");
+                sendMethodNotAllowed(exchange, POST_METHOD);
                 return;
             }
 
             String credentials = readBody(exchange);
             int separator = credentials.indexOf(':');
 
-            if (separator < 0 || credentials.chars().anyMatch(character -> character < 32 || character == 127)) {
-                exchange.sendResponseHeaders(422, -1);
+            if (separator < 0 || credentials.chars().anyMatch(character ->
+                    character < FIRST_NON_CONTROL_CHARACTER || character == DELETE_CHARACTER)) {
+                exchange.sendResponseHeaders(HTTP_UNPROCESSABLE_ENTITY, -1);
                 return;
             }
 
@@ -45,7 +50,7 @@ public class UrlShortenerAuth {
             String password = credentials.substring(separator + 1);
 
             usersDao.upsert(username, password);
-            exchange.sendResponseHeaders(200, -1);
+            exchange.sendResponseHeaders(HttpURLConnection.HTTP_OK, -1);
         }
     }
 
@@ -60,7 +65,7 @@ public class UrlShortenerAuth {
                 "WWW-Authenticate",
                 "Basic realm=\"urlshortener\", charset=\"UTF-8\""
         );
-        exchange.sendResponseHeaders(401, -1);
+        exchange.sendResponseHeaders(HttpURLConnection.HTTP_UNAUTHORIZED, -1);
         return false;
     }
 
@@ -79,7 +84,8 @@ public class UrlShortenerAuth {
         }
 
         int separator = credentials.indexOf(':');
-        if (separator < 0 || credentials.chars().anyMatch(character -> character < 32 || character == 127)) {
+        if (separator < 0 || credentials.chars().anyMatch(character ->
+                character < FIRST_NON_CONTROL_CHARACTER || character == DELETE_CHARACTER)) {
             return false;
         }
 
@@ -95,6 +101,6 @@ public class UrlShortenerAuth {
 
     private void sendMethodNotAllowed(HttpExchange exchange, String allowedMethods) throws IOException {
         exchange.getResponseHeaders().set("Allow", allowedMethods);
-        exchange.sendResponseHeaders(405, -1);
+        exchange.sendResponseHeaders(HttpURLConnection.HTTP_BAD_METHOD, -1);
     }
 }
