@@ -17,7 +17,7 @@ public class ClusterDao implements Dao<String> {
         this.nodes = new HashMap<>();
 
         for (int port : ports) {
-            nodes.put(port, new RemoteDao(port));
+            nodes.computeIfAbsent(port, RemoteDao::new);
         }
     }
 
