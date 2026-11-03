@@ -4,10 +4,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 public class ReplicaSelector {
     private final int[] ports;
@@ -37,13 +34,10 @@ public class ReplicaSelector {
     }
 
     public List<Integer> selectReplicas(String key) {
-        List<Candidate> candidates = new ArrayList<>();
+        List<Candidate> candidates = Arrays.stream(ports)
+                .mapToObj(port -> new Candidate(port, score(key, port)))
+                .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
 
-        for (int port : ports) {
-            long score = score(key, port);
-            Candidate candidate = new Candidate(port, score);
-            candidates.add(candidate);
-        }
         candidates.sort((left, right) -> {
            int comparison = Long.compareUnsigned(right.score(), left.score());
            if (comparison != 0) {

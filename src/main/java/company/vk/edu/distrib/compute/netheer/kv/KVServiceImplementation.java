@@ -234,19 +234,11 @@ public final class KVServiceImplementation implements KVService {
             sendEmptyResponse(exchange, HTTP_NOT_FOUND);
             return;
         }
-        String internalHeader = exchange.getRequestHeaders().getFirst(INTERNAL_REQUEST_HEADER);
+
+        String internalHeader =
+                exchange.getRequestHeaders().getFirst(INTERNAL_REQUEST_HEADER);
         if ("true".equals(internalHeader)) {
-            EntityParams params = EntityParams.parse(
-                    exchange.getRequestURI().getRawQuery(),
-                    1
-            );
-            String method = exchange.getRequestMethod();
-            byte[] body = new byte[0];
-            if (PUT_METHOD.equals(method)) {
-                body = exchange.getRequestBody().readAllBytes();
-            }
-            ReplicaResult result = executeLocal(method, params.key(), body);
-            sendReplicaResult(exchange, result);
+            processInternalRequest(exchange);
             return;
         }
 
@@ -291,6 +283,22 @@ public final class KVServiceImplementation implements KVService {
             return;
         }
 
+        sendReplicaResult(exchange, result);
+    }
+
+    private void processInternalRequest(HttpExchange exchange) throws IOException {
+        EntityParams params = EntityParams.parse(
+                exchange.getRequestURI().getRawQuery(),
+                1
+        );
+
+        String method = exchange.getRequestMethod();
+        byte[] body = new byte[0];
+        if (PUT_METHOD.equals(method)) {
+            body = exchange.getRequestBody().readAllBytes();
+        }
+
+        ReplicaResult result = executeLocal(method, params.key(), body);
         sendReplicaResult(exchange, result);
     }
 

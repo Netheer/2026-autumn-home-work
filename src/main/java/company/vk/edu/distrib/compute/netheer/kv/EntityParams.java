@@ -6,6 +6,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.Map;
 
 record EntityParams(String key, int ack) {
+    private static final int PARAMETER_PARTS = 2;
 
     static EntityParams parse(String query, int replicationFactor) {
         if (query == null) {
@@ -30,8 +31,8 @@ record EntityParams(String key, int ack) {
             Map<String, String> parameters,
             String parameter
     ) {
-        String[] pair = parameter.split("=", 2);
-        if (pair.length != 2) {
+        String[] pair = parameter.split("=", PARAMETER_PARTS);
+        if (pair.length != PARAMETER_PARTS) {
             throw new IllegalArgumentException("Missing = in query parameter");
         }
 
