@@ -261,9 +261,7 @@ public final class KVServiceImplementation implements KVService {
             body = exchange.getRequestBody().readAllBytes();
         }
 
-        if (!GET_METHOD.equals(method)
-                && !PUT_METHOD.equals(method)
-                && !DELETE_METHOD.equals(method)) {
+        if (!isSupportedMethod(method)) {
             sendEmptyResponse(exchange, HTTP_METHOD_NOT_ALLOWED);
             return;
         }
@@ -300,6 +298,12 @@ public final class KVServiceImplementation implements KVService {
 
         ReplicaResult result = executeLocal(method, params.key(), body);
         sendReplicaResult(exchange, result);
+    }
+
+    private static boolean isSupportedMethod(String method) {
+        return GET_METHOD.equals(method)
+                || PUT_METHOD.equals(method)
+                || DELETE_METHOD.equals(method);
     }
 
     private static void sendEmptyResponse(HttpExchange exchange, int statusCode)
