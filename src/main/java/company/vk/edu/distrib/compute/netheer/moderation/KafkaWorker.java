@@ -45,7 +45,9 @@ final class KafkaWorker {
                 return;
             } catch (KafkaException | UncheckedIOException exception) {
                 if (!stopping.get()) {
-                    LOG.warn("Kafka worker {} failed, retrying", thread.getName(), exception);
+                    if (LOG.isWarnEnabled()) {
+                        LOG.warn("Kafka worker {} failed, retrying", thread.getName(), exception);
+                    }
                     try {
                         Thread.sleep(Duration.ofSeconds(1));
                     } catch (InterruptedException interrupted) {

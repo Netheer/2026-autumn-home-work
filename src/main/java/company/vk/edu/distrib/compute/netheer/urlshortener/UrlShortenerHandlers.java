@@ -12,6 +12,8 @@ import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.NoSuchElementException;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 final class UrlShortenerHandlers {
     private static final String ID_ALPHABET =
@@ -28,6 +30,7 @@ final class UrlShortenerHandlers {
     private static final String DELETE_METHOD = "DELETE";
 
     private final int port;
+    private final Lock linkStoreLock = new ReentrantLock();
     private Dao<String> linksDao;
     private @Nullable LinkModeration moderation;
     private final UrlShortenerAuth auth;
@@ -170,12 +173,17 @@ final class UrlShortenerHandlers {
         exchange.sendResponseHeaders(updated ? HttpURLConnection.HTTP_OK : HttpURLConnection.HTTP_NOT_FOUND, -1);
     }
 
-    private synchronized boolean updateStoredLink(String id, String url) throws IOException {
-        if (!linkExists(id)) {
-            return false;
+    private boolean updateStoredLink(String id, String url) throws IOException {
+        linkStoreLock.lock();
+        try {
+            if (!linkExists(id)) {
+                return false;
+            }
+            linksDao.upsert(id, url);
+            return true;
+        } finally {
+            linkStoreLock.unlock();
         }
-        linksDao.upsert(id, url);
-        return true;
     }
 
     private void deleteLink(HttpExchange exchange, String id) throws IOException {
@@ -183,8 +191,13 @@ final class UrlShortenerHandlers {
         exchange.sendResponseHeaders(HttpURLConnection.HTTP_ACCEPTED, -1);
     }
 
-    synchronized void deleteStoredLink(String id) throws IOException {
-        linksDao.delete(id);
+    void deleteStoredLink(String id) throws IOException {
+        linkStoreLock.lock();
+        try {
+            linksDao.delete(id);
+        } finally {
+            linkStoreLock.unlock();
+        }
     }
 
     void handleRedirect(HttpExchange exchange) throws IOException {

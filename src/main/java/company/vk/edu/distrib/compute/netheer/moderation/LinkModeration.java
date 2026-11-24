@@ -52,7 +52,7 @@ public final class LinkModeration {
     }
 
     public void submit(String id, String url) {
-        if (!pending.offer(new LinkCreatedEvent(id, url, Instant.now()))) {
+        if (!pending.offer(new LinkCreatedEvent(id, url, Instant.now())) && LOG.isWarnEnabled()) {
             LOG.warn("Moderation queue is full, creation event for {} was dropped", id);
         }
     }
@@ -72,7 +72,7 @@ public final class LinkModeration {
         var message = new ProducerRecord<>(KafkaClients.CREATED, ModerationEvents.bytes(created.id()),
                 ModerationEvents.encodeCreated(created));
         producer.send(message, (metadata, error) -> {
-            if (error != null) {
+            if (error != null && LOG.isWarnEnabled()) {
                 LOG.warn("Creation event for {} could not be delivered", created.id(), error);
             }
         });
@@ -85,7 +85,9 @@ public final class LinkModeration {
                 deleteLink.delete(result.id());
             }
         } catch (CharacterCodingException | IllegalArgumentException | DateTimeException exception) {
-            LOG.warn("Ignoring malformed moderation result at offset {}", record.offset(), exception);
+            if (LOG.isWarnEnabled()) {
+                LOG.warn("Ignoring malformed moderation result at offset {}", record.offset(), exception);
+            }
         } catch (IOException exception) {
             throw new UncheckedIOException(exception);
         }
