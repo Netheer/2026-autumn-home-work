@@ -3,7 +3,9 @@ package company.vk.edu.distrib.compute.netheer.urlshortener;
 
 import com.sun.net.httpserver.HttpServer;
 import company.vk.edu.distrib.compute.Dao;
+import company.vk.edu.distrib.compute.netheer.moderation.LinkModeration;
 import company.vk.edu.distrib.compute.urlshortener.UrlShortenerService;
+import org.jspecify.annotations.Nullable;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -20,7 +22,8 @@ public class UrlShortenerServiceImplementation implements UrlShortenerService {
     private final UrlShortenerHandlers handlers;
     private final Lock lifecycleLock = new ReentrantLock();
 
-    private boolean lifecycleStarted;
+    private @Nullable LinkModeration moderation;
+    private boolean configurationLocked;
 
     public UrlShortenerServiceImplementation(
             int port,
@@ -41,10 +44,25 @@ public class UrlShortenerServiceImplementation implements UrlShortenerService {
     }
 
     @Override
+    public void setKafkaBootstrapServers(String bootstrapServers) {
+        lifecycleLock.lock();
+        try {
+            if (configurationLocked) {
+                throw new IllegalStateException("Kafka configuration can't be changed after service start or stop");
+            }
+            LinkModeration configuredModeration = new LinkModeration(bootstrapServers, handlers::deleteStoredLink);
+            moderation = configuredModeration;
+            handlers.setModeration(configuredModeration);
+        } finally {
+            lifecycleLock.unlock();
+        }
+    }
+
+    @Override
     public void setLinksDao(Dao<String> dao) {
         lifecycleLock.lock();
         try {
-            if (lifecycleStarted) {
+            if (configurationLocked) {
                 throw new IllegalStateException(
                         "Links DAO can't be changed after service start"
                 );
@@ -62,7 +80,10 @@ public class UrlShortenerServiceImplementation implements UrlShortenerService {
         lifecycleLock.lock();
         try {
             server.start();
-            lifecycleStarted = true;
+            configurationLocked = true;
+            if (moderation != null) {
+                moderation.start();
+            }
         } finally {
             lifecycleLock.unlock();
         }
@@ -72,10 +93,14 @@ public class UrlShortenerServiceImplementation implements UrlShortenerService {
     public void stop() {
         lifecycleLock.lock();
         try {
+            configurationLocked = true;
             Dao<String> currentLinksDao = linksDao;
 
             try (currentLinksDao; usersDao) {
                 server.stop(STOP_DELAY_SECONDS);
+                if (moderation != null) {
+                    moderation.stop();
+                }
             } catch (IOException exception) {
                 throw new UncheckedIOException(exception);
             }

@@ -2,6 +2,8 @@ package company.vk.edu.distrib.compute.netheer.urlshortener;
 
 import com.sun.net.httpserver.HttpExchange;
 import company.vk.edu.distrib.compute.Dao;
+import company.vk.edu.distrib.compute.netheer.moderation.LinkModeration;
+import org.jspecify.annotations.Nullable;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
@@ -27,6 +29,7 @@ final class UrlShortenerHandlers {
 
     private final int port;
     private Dao<String> linksDao;
+    private @Nullable LinkModeration moderation;
     private final UrlShortenerAuth auth;
     private final SecureRandom random = new SecureRandom();
 
@@ -117,6 +120,10 @@ final class UrlShortenerHandlers {
         this.linksDao = linksDao;
     }
 
+    void setModeration(LinkModeration moderation) {
+        this.moderation = moderation;
+    }
+
     private void getLink(HttpExchange exchange, String id) throws IOException {
         String url;
         try {
@@ -143,6 +150,9 @@ final class UrlShortenerHandlers {
         } while (linkExists(id));
 
         linksDao.upsert(id, url);
+        if (moderation != null) {
+            moderation.submit(id, url);
+        }
 
         String shortUrl = "http://localhost:" + port + "/" + id;
         sendText(exchange, HttpURLConnection.HTTP_CREATED, shortUrl);
@@ -156,18 +166,25 @@ final class UrlShortenerHandlers {
             return;
         }
 
-        boolean updated = linkExists(id);
-        if (updated) {
-            linksDao.upsert(id, url);
-        }
-
+        boolean updated = updateStoredLink(id, url);
         exchange.sendResponseHeaders(updated ? HttpURLConnection.HTTP_OK : HttpURLConnection.HTTP_NOT_FOUND, -1);
     }
 
-    private void deleteLink(HttpExchange exchange, String id) throws IOException {
-        linksDao.delete(id);
+    private synchronized boolean updateStoredLink(String id, String url) throws IOException {
+        if (!linkExists(id)) {
+            return false;
+        }
+        linksDao.upsert(id, url);
+        return true;
+    }
 
+    private void deleteLink(HttpExchange exchange, String id) throws IOException {
+        deleteStoredLink(id);
         exchange.sendResponseHeaders(HttpURLConnection.HTTP_ACCEPTED, -1);
+    }
+
+    synchronized void deleteStoredLink(String id) throws IOException {
+        linksDao.delete(id);
     }
 
     void handleRedirect(HttpExchange exchange) throws IOException {
